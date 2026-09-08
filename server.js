@@ -1,4 +1,5 @@
 import fs from "fs";
+import { spawnSync } from "child_process";
 // ============================================================================
 // word - Server Application (JavaScript)
 // Express + WebSocket + Gemini 3.8 Flash AI Hints
@@ -14,6 +15,185 @@ import { GoogleGenAI } from "@google/genai";
 
 
 dotenv.config();
+
+// Gemini AI Client (Lazy initialization)
+let aiClient = null;
+function getAiClient() {
+  if (!aiClient && process.env.GEMINI_API_KEY) {
+    aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  }
+  return aiClient;
+}
+
+// ============================================================================
+// Native C++ Logic Backend Engine Bridge
+// ============================================================================
+export class CppBackendEngine {
+  static getEnginePath() {
+    const ext = process.platform === "win32" ? ".exe" : "";
+    const primary = path.join(process.cwd(), "backend", `wordrush_engine${ext}`);
+    if (fs.existsSync(primary)) return primary;
+    return null;
+  }
+
+  static runCommand(cmd, args = []) {
+    const enginePath = this.getEnginePath();
+    if (!enginePath) return null;
+    try {
+      const res = spawnSync(enginePath, [cmd, ...args], { encoding: "utf-8", timeout: 4000 });
+      if (res.status === 0 && res.stdout) {
+        return JSON.parse(res.stdout.trim());
+      }
+    } catch (e) {
+      console.warn("C++ Engine execution warning:", e?.message || e);
+    }
+    return null;
+  }
+
+  static validateWord(word, length) {
+    const res = this.runCommand("validate", [word, String(length)]);
+    if (res && res.success) return res;
+    return null;
+  }
+
+  static evaluateGuess(guess, secret) {
+    const res = this.runCommand("evaluate", [guess, secret]);
+    if (res && res.success) return res;
+    return null;
+  }
+
+  static getHints(secret, difficulty = 2) {
+    const res = this.runCommand("hints", [secret, String(difficulty)]);
+    if (res && res.success) return res.hints;
+    return null;
+  }
+
+  static getRandomWord(length = 5) {
+    const res = this.runCommand("random", [String(length)]);
+    if (res && res.success && res.word) return res.word;
+    return null;
+  }
+
+  static getAiDecision(length, secret, attempts, pastGuesses) {
+    const res = this.runCommand("ai_decision", [
+      String(length),
+      secret || "",
+      String(attempts || 0),
+      Array.isArray(pastGuesses) ? pastGuesses.join(",") : (pastGuesses || ""),
+    ]);
+    if (res && res.action) return res;
+    return null;
+  }
+
+  static addWord(word) {
+    return this.runCommand("add_word", [word]);
+  }
+
+  static calculateScore(attemptIndex, hintsUsed = 0) {
+    const res = this.runCommand("score", [String(attemptIndex), String(hintsUsed)]);
+    if (res && res.success && typeof res.score === "number") return res.score;
+    return null;
+  }
+
+  static generateRoomCode() {
+    const res = this.runCommand("room_code", []);
+    if (res && res.success && res.roomCode) return res.roomCode;
+    return null;
+  }
+
+  static classifyWord(word) {
+    const res = this.runCommand("classify", [word]);
+    if (res && res.success) return res;
+    return null;
+  }
+}
+
+// ============================================================================
+// Real-Time Lexical Arbiter: Validates words against C++ Dictionary & Gemini AI
+// If words are not present in dictionary, AI is consulted and dynamically caches it!
+// ============================================================================
+export async function verifyWordWithAi(word, length, allowDuplicates = false) {
+  const clean = (word || "").toUpperCase().trim();
+  if (!clean || clean.length !== length) {
+    return { valid: false, error: `Word must be exactly ${length} letters long.` };
+  }
+  if (!/^[A-Z]+$/.test(clean)) {
+    return { valid: false, error: "Word can only contain alphabetic letters (A-Z)." };
+  }
+
+  // Check duplicate letters only when not allowed (e.g. secret words)
+  if (!allowDuplicates) {
+    const seen = new Set();
+    for (let i = 0; i < clean.length; i++) {
+      if (seen.has(clean[i])) {
+        return { valid: false, error: `Duplicate letters not allowed in secret words ('${clean[i]}' repeats).` };
+      }
+      seen.add(clean[i]);
+    }
+  }
+
+  // 1. Check native C++ Dictionary first (instant O(1))
+  const cppVal = CppBackendEngine.validateWord(clean, length);
+  if (cppVal && cppVal.inDictionary) {
+    return { valid: true, word: clean, source: "cpp_dictionary" };
+  }
+  if (serverDictionary.isValidWord(clean)) {
+    return { valid: true, word: clean, source: "embedded_dictionary" };
+  }
+
+  // 2. Word is not in the baseline dictionary -> Consult Gemini AI Arbiter!
+  const ai = getAiClient();
+  if (ai) {
+    try {
+      const prompt = `You are the official linguistic judge for a competitive word puzzle game.
+Analyze the candidate word: "${clean}" (length: ${clean.length} letters).
+Question: Is "${clean}" a legitimate, recognized English dictionary word?
+Rules:
+- Respond strictly with JSON ONLY: {"valid": true, "definition": "Brief definition", "category": "Noun/Verb/Adjective"} OR {"valid": false, "reason": "Why it is not a valid English word"}
+- Valid words include standard English vocabulary, everyday terms, and common linguistic words.
+- Random jumbles (e.g. XQZJK, ASDFG) are false.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+
+      const text = response?.text?.trim();
+      if (text) {
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (parsed.valid) {
+            // Dynamically register into C++ engine & server cache!
+            CppBackendEngine.addWord(clean);
+            serverDictionary.wordsSet.add(clean);
+            serverDictionary.wordsList.push(clean);
+            return {
+              valid: true,
+              word: clean,
+              source: "gemini_ai_verified",
+              definition: parsed.definition || "Verified English Word",
+              category: parsed.category || "General",
+            };
+          } else {
+            return {
+              valid: false,
+              error: `'${clean}' is not recognized as a valid English word: ${parsed.reason || "Not found in English lexicon"}.`,
+            };
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Gemini AI word referral error:", err?.message || err);
+    }
+  }
+
+  // Fallback if AI offline or key missing:
+  return {
+    valid: false,
+    error: `'${clean}' is not in the base dictionary. (AI word referral requires GEMINI_API_KEY).`,
+  };
+}
 
 
 // --- Embedded Dictionary & Engine ---
@@ -201,24 +381,18 @@ export class WordValidator {
     return false;
   }
 
-  static validateSecretWord(word, targetLength) {
-    if (!word || typeof word !== "string" || word.trim().length === 0) {
-      return { valid: false, error: "Secret word cannot be empty." };
-    }
-    const clean = word.trim().toUpperCase();
-    if (clean.length !== targetLength) {
-      return { valid: false, error: `Word must be exactly ${targetLength} letters long.` };
-    }
-    if (!/^[A-Z]+$/.test(clean)) {
-      return { valid: false, error: "Word can only contain alphabetic letters (A-Z)." };
-    }
-    if (!serverDictionary.isValidWord(clean)) {
-      return { valid: false, error: `'${clean}' is not in the official dictionary.` };
-    }
-    return { valid: true, word: clean };
+  static async validateSecretWord(word, targetLength) {
+    return await verifyWordWithAi(word, targetLength);
   }
 
   static compareGuess(secretWord, guessWord, wordLength) {
+    // 1. First-class execution: Native C++ Engine Deduction
+    const cppRes = CppBackendEngine.evaluateGuess(guessWord, secretWord);
+    if (cppRes && Array.isArray(cppRes.states)) {
+      return cppRes.states;
+    }
+
+    // 2. Fallback in JS if native process unavailable
     const states = new Array(wordLength).fill(STATE_GRAY);
     const targetFreq = new Map();
 
@@ -259,6 +433,11 @@ export class ScoreManager {
   static calculateRoundScore(wordFound, attemptsUsed, maxAttempts, freeHintsRemaining, extraHintsTaken) {
     if (!wordFound) {
       return Math.max(0, 0 - extraHintsTaken * 1);
+    }
+    const attemptIndex = attemptsUsed - 1;
+    const cppScore = CppBackendEngine.calculateScore(attemptIndex, extraHintsTaken);
+    if (cppScore !== null) {
+      return cppScore;
     }
     let score = 10;
     if (attemptsUsed > 0 && attemptsUsed <= maxAttempts) {
@@ -344,12 +523,14 @@ export class ArenaEngine {
   }
 
   generateRoomCode() {
-    const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ";
     let code = "";
     do {
-      code = "";
-      for (let i = 0; i < 5; i++) {
-        code += charset[Math.floor(Math.random() * charset.length)];
+      code = CppBackendEngine.generateRoomCode() || "";
+      if (!code) {
+        const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+        for (let i = 0; i < 5; i++) {
+          code += charset[Math.floor(Math.random() * charset.length)];
+        }
       }
     } while (this.activeRooms.has(code));
     return code;
@@ -472,7 +653,7 @@ export class ArenaEngine {
     return room;
   }
 
-  setSecretWord(roomCode, playerId, word) {
+  async setSecretWord(roomCode, playerId, word) {
     const room = this.getRoom(roomCode);
     if (!room || room.phase !== "WORD_SELECTION" || !room.currentRound) {
       return { success: false, error: "Not in word selection phase." };
@@ -483,7 +664,7 @@ export class ArenaEngine {
       return { success: false, error: "Only the designated word setter can choose the secret word." };
     }
 
-    const validation = WordValidator.validateSecretWord(word, room.wordLength);
+    const validation = await WordValidator.validateSecretWord(word, room.wordLength);
     if (!validation.valid) {
       return { success: false, error: validation.error };
     }
@@ -493,14 +674,15 @@ export class ArenaEngine {
     room.phase = "GUESSING";
 
     const guesser = room.players[room.guesserIndex];
+    const sourceNote = validation.source === "gemini_ai_verified" ? " (AI Verified English Word)" : "";
     room.recentEvents.push(
-      `Word chosen! ${guesser ? guesser.username : "Guesser"} is now solving the word.`
+      `Word chosen${sourceNote}! ${guesser ? guesser.username : "Guesser"} is now solving the word.`
     );
 
     return { success: true, room };
   }
 
-  submitGuess(roomCode, playerId, guessWord) {
+  async submitGuess(roomCode, playerId, guessWord) {
     const room = this.getRoom(roomCode);
     if (!room || room.phase !== "GUESSING" || !room.currentRound) {
       return { success: false, error: "Not in guessing phase." };
@@ -521,8 +703,21 @@ export class ArenaEngine {
       return { success: false, error: `Guess must be ${room.wordLength} letters.` };
     }
 
-    if (!serverDictionary.isValidWord(cleanGuess)) {
-      return { success: false, error: `'${cleanGuess}' is not in the dictionary.` };
+    // Check guess against C++ dictionary / local dictionary; if missing, consult Gemini AI!
+    let isValidGuess = false;
+    const cppCheck = CppBackendEngine.validateWord(cleanGuess, room.wordLength);
+    if (cppCheck && cppCheck.inDictionary) {
+      isValidGuess = true;
+    } else if (serverDictionary.isValidWord(cleanGuess)) {
+      isValidGuess = true;
+    }
+    if (!isValidGuess) {
+      const aiCheck = await verifyWordWithAi(cleanGuess, room.wordLength, true);
+      if (aiCheck.valid) {
+        isValidGuess = true;
+      } else {
+        return { success: false, error: aiCheck.error || `'${cleanGuess}' is not in the dictionary.` };
+      }
     }
 
     const states = WordValidator.compareGuess(round.secretWord, cleanGuess, room.wordLength);
@@ -784,15 +979,6 @@ const socketPlayerIds = new Map();
 // Track reverse lookup: WebSocket -> roomCode
 const socketRoomCodes = new Map();
 
-// Gemini AI Client (Lazy initialization)
-let aiClient = null;
-function getAiClient() {
-  if (!aiClient && process.env.GEMINI_API_KEY) {
-    aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  }
-  return aiClient;
-}
-
 // Generate smart hint using Gemini 3.8 Flash
 async function generateGeminiHint(word, hintsUsed = 0) {
   const clean = (word || "").toUpperCase().trim();
@@ -871,7 +1057,7 @@ function broadcastToRoom(room, message) {
   }
 }
 
-// Automated peer CyberBot turn handler
+// Automated peer CyberBot turn handler powered by Native C++ Decision Engine & Gemini AI
 function triggerBotTurnIfActive(room) {
   if (!room) return;
   const botPlayer = room.players.find((p) => p && p.playerId.startsWith("bot_"));
@@ -882,13 +1068,18 @@ function triggerBotTurnIfActive(room) {
     room.phase === "WORD_SELECTION" &&
     room.players[room.wordSetterIndex]?.playerId === botPlayer.playerId
   ) {
-    setTimeout(() => {
+    setTimeout(async () => {
       const currentRoom = arenaEngine.getRoom(room.roomCode);
       if (!currentRoom || currentRoom.phase !== "WORD_SELECTION") return;
 
-      let botWord = serverDictionary.getRandomWord(currentRoom.wordLength);
+      // C++ Engine selects random word of given length without duplicate letters
+      let botWord = CppBackendEngine.getRandomWord(currentRoom.wordLength);
+      if (!botWord) {
+        botWord = serverDictionary.getRandomWord(currentRoom.wordLength);
+      }
+
       for (let attempt = 0; attempt < 50; attempt++) {
-        const candidate = serverDictionary.getRandomWord(currentRoom.wordLength);
+        const candidate = CppBackendEngine.getRandomWord(currentRoom.wordLength) || serverDictionary.getRandomWord(currentRoom.wordLength);
         if (candidate && !WordValidator.hasDuplicateLetters(candidate)) {
           botWord = candidate;
           break;
@@ -896,7 +1087,7 @@ function triggerBotTurnIfActive(room) {
       }
 
       if (botWord) {
-        const res = arenaEngine.setSecretWord(currentRoom.roomCode, botPlayer.playerId, botWord);
+        const res = await arenaEngine.setSecretWord(currentRoom.roomCode, botPlayer.playerId, botWord);
         if (res.success) {
           broadcastRoomState(res.room);
           triggerBotTurnIfActive(res.room);
@@ -913,7 +1104,7 @@ function triggerBotTurnIfActive(room) {
     room.currentRound &&
     !room.currentRound.completed
   ) {
-    setTimeout(() => {
+    setTimeout(async () => {
       const currentRoom = arenaEngine.getRoom(room.roomCode);
       if (
         !currentRoom ||
@@ -926,18 +1117,38 @@ function triggerBotTurnIfActive(room) {
 
       const secret = currentRoom.currentRound.secretWord;
       const attempts = currentRoom.currentRound.attemptsUsed;
+      const pastGuesses = currentRoom.currentRound.gameBoard
+        .slice(0, attempts)
+        .map((row) => row.join(""));
 
-      let botGuess = "";
-      // Smart progressive guess: 35% chance or attempt >= 3 to guess target word
-      if (attempts >= 3 || Math.random() < 0.35) {
-        botGuess = secret;
-      } else {
-        const candidate = serverDictionary.getRandomWord(currentRoom.wordLength);
-        botGuess = candidate || secret;
+      // 1. Ask Native C++ Engine for Automatic AI Deduction Decision
+      const aiDecision = CppBackendEngine.getAiDecision(
+        currentRoom.wordLength,
+        secret,
+        attempts,
+        pastGuesses
+      );
+
+      // Automatic hint decision: If C++ AI recommends requesting hint & hints remain
+      if (aiDecision?.shouldRequestHint && currentRoom.currentRound.freeHintsRemaining > 0) {
+        const diff = currentRoom.wordLength === 4 ? 1 : currentRoom.wordLength === 6 ? 3 : 2;
+        const hints = CppBackendEngine.getHints(secret, diff);
+        const hintClue = (hints && hints[currentRoom.currentRound.hintsUsed])?.text || "Pattern analyzed.";
+        arenaEngine.recordHint(currentRoom.roomCode, `🤖 CyberBot Tactical Clue: ${hintClue}`);
+        broadcastRoomState(currentRoom);
+      }
+
+      let botGuess = aiDecision?.guess;
+      if (!botGuess) {
+        if (attempts >= 3 || Math.random() < 0.35) {
+          botGuess = secret;
+        } else {
+          botGuess = CppBackendEngine.getRandomWord(currentRoom.wordLength) || serverDictionary.getRandomWord(currentRoom.wordLength);
+        }
       }
 
       if (botGuess) {
-        const res = arenaEngine.submitGuess(currentRoom.roomCode, botPlayer.playerId, botGuess);
+        const res = await arenaEngine.submitGuess(currentRoom.roomCode, botPlayer.playerId, botGuess);
         if (res.success) {
           broadcastRoomState(res.room);
           if (res.room.currentRound?.completed) {
@@ -960,7 +1171,7 @@ function triggerBotTurnIfActive(room) {
           }
         }
       }
-    }, 2200);
+    }, 1800);
   }
 }
 
@@ -979,23 +1190,39 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-app.post("/api/dictionary/validate", (req, res) => {
-  const { word, length } = req.body || {};
-  const validation = WordValidator.validateSecretWord(word, length || 5);
+app.post("/api/dictionary/validate", async (req, res) => {
+  const { word, length, allowDuplicates = false } = req.body || {};
+  const validation = await verifyWordWithAi(word, Number(length) || 5, Boolean(allowDuplicates));
   res.json(validation);
 });
 
 app.get("/api/dictionary/random", (req, res) => {
   const len = Number(req.query.length) || 5;
-  const word = serverDictionary.getRandomWord(len);
+  const word = CppBackendEngine.getRandomWord(len) || serverDictionary.getRandomWord(len);
   res.json({ word, length: len });
+});
+
+app.post("/api/ai/decision", (req, res) => {
+  const { wordLength = 5, secret = "", attempts = 0, pastGuesses = [] } = req.body || {};
+  const decision = CppBackendEngine.getAiDecision(wordLength, secret, attempts, pastGuesses);
+  res.json({ success: true, decision });
+});
+
+app.get("/api/dictionary/classify", (req, res) => {
+  const word = (req.query.word || "").toString();
+  const classification = CppBackendEngine.classifyWord(word);
+  res.json({ success: true, classification });
 });
 
 app.post("/api/hints/gemini", async (req, res) => {
   try {
-    const { word, hintsUsed = 0 } = req.body || {};
+    const { word, hintsUsed = 0, difficulty = 2 } = req.body || {};
+    const cppHints = CppBackendEngine.getHints(word, difficulty);
+    if (cppHints && cppHints.length > hintsUsed) {
+      return res.json({ hint: cppHints[hintsUsed].text, model: "native-cpp-stack" });
+    }
     const clue = await generateGeminiHint(word, hintsUsed);
-    res.json({ hint: clue, model: "gemini-3.8-flash" });
+    res.json({ hint: clue, model: "gemini-2.5-flash" });
   } catch (err) {
     res.status(500).json({ error: "Failed to generate hint" });
   }
@@ -1296,7 +1523,7 @@ wss.on("connection", (ws) => {
         case "SET_SECRET_WORD": {
           const { roomCode, playerId } = payload || {};
           const secretWord = payload?.secretWord || payload?.word;
-          const res = arenaEngine.setSecretWord(roomCode, playerId, secretWord);
+          const res = await arenaEngine.setSecretWord(roomCode, playerId, secretWord);
           if (!res.success) {
             ws.send(JSON.stringify({ type: "ERROR", payload: { message: res.error } }));
             return;
@@ -1308,7 +1535,7 @@ wss.on("connection", (ws) => {
 
         case "SUBMIT_GUESS": {
           const { roomCode, playerId, guess } = payload || {};
-          const res = arenaEngine.submitGuess(roomCode, playerId, guess);
+          const res = await arenaEngine.submitGuess(roomCode, playerId, guess);
           if (!res.success) {
             ws.send(JSON.stringify({ type: "ERROR", payload: { message: res.error } }));
             return;
@@ -1348,7 +1575,15 @@ wss.on("connection", (ws) => {
           }
 
           const secret = room.currentRound.secretWord;
-          const hintText = await generateGeminiHint(secret, room.currentRound.hintsUsed || 0);
+          const diffLevel = room.wordLength === 4 ? 1 : room.wordLength === 6 ? 3 : 2;
+          const cppHints = CppBackendEngine.getHints(secret, diffLevel);
+          let hintText = "";
+          const hintsIndex = room.currentRound.hintsUsed || 0;
+          if (cppHints && cppHints.length > hintsIndex) {
+            hintText = cppHints[hintsIndex].text;
+          } else {
+            hintText = await generateGeminiHint(secret, hintsIndex);
+          }
 
           arenaEngine.recordHint(roomCode, hintText);
 
@@ -1361,6 +1596,29 @@ wss.on("connection", (ws) => {
             },
           });
           broadcastRoomState(room);
+          break;
+        }
+
+        case "REQUEST_AI_DECISION": {
+          const { roomCode } = payload || {};
+          const room = arenaEngine.getRoom(roomCode);
+          if (!room || !room.currentRound) return;
+          const attempts = room.currentRound.attemptsUsed;
+          const pastGuesses = room.currentRound.gameBoard
+            .slice(0, attempts)
+            .map((row) => row.join(""));
+          const decision = CppBackendEngine.getAiDecision(
+            room.wordLength,
+            room.currentRound.secretWord,
+            attempts,
+            pastGuesses
+          );
+          ws.send(
+            JSON.stringify({
+              type: "AI_DECISION_RECEIVED",
+              payload: { decision },
+            })
+          );
           break;
         }
 
