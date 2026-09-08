@@ -29,7 +29,6 @@ import {
   getRandomDictionaryWord,
   lookupWord,
 } from "../utils/dictionary";
-import { soundManager } from "../services/audio";
 
 export const WordPuzzleGame = ({
   isOpen = false,
@@ -158,7 +157,6 @@ export const WordPuzzleGame = ({
 
   // Functionality to get another word anytime (during or after typing)
   const handleNextWord = useCallback(() => {
-    soundManager.play("start");
     // Advance to next puzzle or procedurally generate another word
     const nextIdx = puzzleIndex + 1;
     if (nextIdx >= combinedPuzzleList.length) {
@@ -213,9 +211,6 @@ export const WordPuzzleGame = ({
     if (currentInput.length !== wordLength) {
       setIsShake(true);
       setTimeout(() => setIsShake(false), 500);
-      try {
-        soundManager.play("error");
-      } catch {}
       return;
     }
 
@@ -257,10 +252,6 @@ export const WordPuzzleGame = ({
       });
 
       try {
-        soundManager.play("win");
-      } catch {}
-
-      try {
         confetti({
           particleCount: 90,
           spread: 75,
@@ -281,13 +272,6 @@ export const WordPuzzleGame = ({
       try {
         localStorage.setItem("wordrush_puzzle_streak", "0");
       } catch {}
-      try {
-        soundManager.play("error");
-      } catch {}
-    } else {
-      try {
-        soundManager.play("tilePop");
-      } catch {}
     }
   }, [
     currentInput,
@@ -304,7 +288,6 @@ export const WordPuzzleGame = ({
   const handleAutoSolvePuzzle = useCallback(() => {
     if (isGameOver) return;
 
-    soundManager.play("win");
     setCurrentInput("");
     const newGuesses = [...guesses, targetWord];
     setGuesses(newGuesses);
@@ -350,15 +333,9 @@ export const WordPuzzleGame = ({
         handleSubmitGuess();
       } else if (char === "BACKSPACE" || char === "DELETE") {
         setCurrentInput((prev) => prev.slice(0, -1));
-        try {
-          soundManager.play("keyPress");
-        } catch {}
       } else if (/^[A-Z]$/i.test(char)) {
         if (currentInput.length < wordLength) {
           setCurrentInput((prev) => (prev + char).toUpperCase());
-          try {
-            soundManager.play("keyPress");
-          } catch {}
         }
       }
     },
@@ -488,7 +465,7 @@ export const WordPuzzleGame = ({
             })}
           </div>
 
-          {/* Active Clue & Hint Card + Anagram Solver Quick Link */}
+          {/* Active Clue & Hint Card */}
           <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-100/70 via-yellow-50 to-emerald-50/70 border-2 border-amber-200 flex flex-col gap-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
@@ -501,29 +478,7 @@ export const WordPuzzleGame = ({
                 </span>
               </div>
 
-              <div className="flex items-center gap-3">
-                {/* Auto-Solve Puzzle Button */}
-                <button
-                  onClick={handleAutoSolvePuzzle}
-                  disabled={isGameOver}
-                  className="px-2.5 py-1 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-black text-xs shadow-xs flex items-center gap-1 cursor-pointer transition-all active:scale-95 border border-violet-400 disabled:opacity-50"
-                  title="Automatically solve and decrypt the current puzzle"
-                >
-                  <Zap className="w-3.5 h-3.5 fill-yellow-300 text-yellow-300" />
-                  <span>Auto-Solve Puzzle</span>
-                </button>
-
-                {/* Anagram Solver Trigger Button */}
-                <button
-                  onClick={() => setIsAnagramModalOpen(true)}
-                  className="text-xs font-black text-purple-800 hover:text-purple-950 flex items-center gap-1 cursor-pointer transition-colors"
-                  title="Open Anagram Solver for this word or any letters"
-                >
-                  <Zap className="w-3.5 h-3.5 text-purple-600 fill-purple-600" />
-                  <span>Anagram Solver</span>
-                </button>
-
-                {/* Need Hint Button */}
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
                     setShowHint(true);
@@ -533,16 +488,6 @@ export const WordPuzzleGame = ({
                 >
                   <BookOpen className="w-3.5 h-3.5" />
                   <span>Need Hint?</span>
-                </button>
-
-                {/* Get Other Word Action Button */}
-                <button
-                  onClick={handleNextWord}
-                  className="text-xs font-black text-emerald-800 hover:text-emerald-950 underline cursor-pointer flex items-center gap-1"
-                  title="Switch to another word puzzle"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Get Other Word</span>
                 </button>
               </div>
             </div>
@@ -625,40 +570,41 @@ export const WordPuzzleGame = ({
             })}
           </div>
 
-          {/* Action Row After Typing: Allow getting another word right away */}
-          <div className="flex items-center justify-between px-1 text-xs">
-            <div className="flex items-center gap-2">
+          {/* Action Row After Typing: Spacious, responsive button bar without overlaps */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 px-1 text-xs">
+            <div className="flex items-center flex-wrap justify-center sm:justify-start gap-2 w-full sm:w-auto">
               <button
                 onClick={handleNextWord}
-                className="px-3 py-1.5 rounded-xl bg-amber-200 hover:bg-amber-300 text-amber-950 font-black flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-xs"
+                className="px-3.5 py-2 rounded-xl bg-amber-200 hover:bg-amber-300 text-amber-950 font-black flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-xs"
                 title="Get another word puzzle immediately"
               >
-                <RotateCcw className="w-3 h-3" />
+                <RotateCcw className="w-3.5 h-3.5" />
                 <span>Get Another Word</span>
               </button>
 
               <button
                 onClick={handleAutoSolvePuzzle}
                 disabled={isGameOver}
-                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-black flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-xs disabled:opacity-50"
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-black flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-xs disabled:opacity-50"
                 title="Automatically solve this puzzle and earn points"
               >
-                <Zap className="w-3 h-3 fill-yellow-300 text-yellow-300" />
+                <Zap className="w-3.5 h-3.5 fill-yellow-300 text-yellow-300" />
                 <span>Auto-Solve</span>
               </button>
 
               <button
                 onClick={() => setIsAnagramModalOpen(true)}
-                className="px-3 py-1.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-950 font-black flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-xs"
+                className="px-3.5 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-950 font-black flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-xs"
+                title="Open Anagram Solver"
               >
-                <Zap className="w-3 h-3 text-purple-600" />
+                <Zap className="w-3.5 h-3.5 text-purple-600" />
                 <span>Unscramble Anagrams</span>
               </button>
             </div>
 
-            <span className="text-[11px] text-slate-500 font-medium">
+            <div className="px-3 py-1.5 rounded-xl bg-slate-100/90 text-slate-600 font-bold text-xs border border-slate-200 shrink-0 self-center sm:self-auto shadow-xs">
               {guesses.length} / {maxAttempts} tries used
-            </span>
+            </div>
           </div>
 
           {/* Real-Time Word & Name Detector Mention */}

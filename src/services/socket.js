@@ -12,15 +12,23 @@ class SocketService {
     this.messageQueue = [];
   }
 
+  get connected() {
+    return Boolean(this.isConnected && this.socket && this.socket.readyState === WebSocket.OPEN);
+  }
+
   connect() {
     return new Promise((resolve) => {
       if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+        this.isConnected = true;
         resolve(true);
         return;
       }
 
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const host = window.location.host;
+      let host = window.location.host;
+      if (window.location.port === "5173") {
+        host = `${window.location.hostname}:3000`;
+      }
       const wsUrl = `${protocol}//${host}`;
 
       try {

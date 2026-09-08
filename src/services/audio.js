@@ -1,17 +1,17 @@
-// Audio effects disabled per user request
-class SoundManager {
+// ============================================================================
+// Sound Manager - Completely Removed / Silenced per user request
+// No sound effects, no Web Audio synthesis, no audio playback
+// ============================================================================
+
+class NullSoundManager {
   constructor() {
     this.muted = true;
     this.ctx = null;
   }
-
   init() {}
-  toggleMute() {
-    return true;
-  }
-  isMuted() {
-    return true;
-  }
+  toggleMute() { return true; }
+  isMuted() { return true; }
+  play() {}
   playPop() {}
   playKeyClick() {}
   playTileFlip() {}
@@ -25,5 +25,12 @@ class SoundManager {
   playGameOver() {}
 }
 
-export const soundManager = new SoundManager();
+// Universal no-op proxy ensuring any sound effect invocation is completely silent
+export const soundManager = new Proxy(new NullSoundManager(), {
+  get(target, prop) {
+    if (prop in target) return target[prop];
+    return () => {};
+  },
+});
 
+export default soundManager;

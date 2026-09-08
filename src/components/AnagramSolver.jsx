@@ -18,7 +18,6 @@ import {
 import confetti from "canvas-confetti";
 import { solveAnagramLocally, scrambleWord } from "../utils/anagramSolver";
 import { DICTIONARY_ENTRIES, getRandomDictionaryWord } from "../utils/dictionary";
-import { soundManager } from "../services/audio";
 
 export const AnagramSolver = ({
   isOpen = false,
@@ -123,7 +122,6 @@ export const AnagramSolver = ({
 
   // Shuffle Challenge Letters
   const handleShuffleChallenge = useCallback(() => {
-    soundManager.play("tilePop");
     setChallengeScramble(scrambleWord(challengeTarget));
   }, [challengeTarget]);
 
@@ -138,7 +136,6 @@ export const AnagramSolver = ({
     setChallengeInput("");
     setFoundWords(new Set());
     setChallengeMessage("");
-    soundManager.play("start");
   }, []);
 
   // Submit guess in Challenge Mode
@@ -150,7 +147,6 @@ export const AnagramSolver = ({
       setChallengeMessage(`"${clean}" already discovered!`);
       setChallengeShake(true);
       setTimeout(() => setChallengeShake(false), 500);
-      soundManager.play("error");
       return;
     }
 
@@ -163,7 +159,6 @@ export const AnagramSolver = ({
 
       const pts = match.points || clean.length * 20;
       awardPoints(pts, `Solved "${clean}"!`);
-      soundManager.play("win");
 
       if (clean === challengeTarget || newFound.size === challengeSolutions.anagrams.length) {
         setChallengeMessage(`🎉 Target Anagram Unlocked: ${challengeTarget}! +${pts} PTS`);
@@ -181,7 +176,6 @@ export const AnagramSolver = ({
       setChallengeMessage(`"${clean}" is not a valid anagram of these letters.`);
       setChallengeShake(true);
       setTimeout(() => setChallengeShake(false), 500);
-      soundManager.play("error");
     }
   }, [challengeInput, foundWords, challengeSolutions, challengeTarget, awardPoints]);
 
@@ -206,8 +200,6 @@ export const AnagramSolver = ({
     if (bonusPoints > 0) {
       awardPoints(bonusPoints, `Auto-Solved ${challengeSolutions.count} Anagrams`);
     }
-
-    soundManager.play("win");
     try {
       confetti({
         particleCount: 80,
@@ -239,7 +231,6 @@ export const AnagramSolver = ({
       navigator.clipboard.writeText(word);
       setCopiedWord(word);
       setTimeout(() => setCopiedWord(null), 1500);
-      soundManager.play("tilePop");
     } catch {}
   };
 
@@ -349,7 +340,6 @@ export const AnagramSolver = ({
                 <button
                   onClick={() => {
                     setInputLetters(scrambleWord(inputLetters));
-                    soundManager.play("tilePop");
                   }}
                   className="px-3 py-2.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-black text-xs border border-amber-300 flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
                   title="Shuffle letter order"
@@ -362,7 +352,6 @@ export const AnagramSolver = ({
                   onClick={() => {
                     const rand = getRandomDictionaryWord(5);
                     if (rand) setInputLetters(rand.word);
-                    soundManager.play("tilePop");
                   }}
                   className="px-3 py-2.5 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-black text-xs border border-emerald-300 flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
                   title="Get Random Dictionary Letters"

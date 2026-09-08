@@ -616,6 +616,18 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
+    if (cmd == "room_code") {
+        const std::string charset = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+        std::mt19937 rng(std::random_device{}());
+        std::uniform_int_distribution<int> dist(0, static_cast<int>(charset.length()) - 1);
+        std::string code = "";
+        for (int i = 0; i < 5; ++i) {
+            code += charset[dist(rng)];
+        }
+        std::cout << "{\"success\":true,\"roomCode\":\"" << code << "\"}\n";
+        return 0;
+    }
+
     std::cout << "{\"error\":\"Unknown command: " << WordRush::escapeJson(cmd) << "\"}\n";
     return 1;
 }

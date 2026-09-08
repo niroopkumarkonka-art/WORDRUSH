@@ -13,14 +13,14 @@ export const LetterTile = ({
     lg: "w-14 h-14 sm:w-16 sm:h-16 text-2xl sm:text-3xl",
   }[size] || "w-12 h-12 sm:w-15 sm:h-15 text-xl sm:text-2xl";
 
-  // 1. EMPTY SLOT (Indented word slots)
+  // 1. EMPTY SLOT (Crisp, clean wordle-style candy slot tiles)
   if (state === "EMPTY" && !letter) {
     return (
       <div
         id={`tile-empty-${index}`}
-        className={`relative flex items-center justify-center rounded-2xl select-none transition-all duration-300 bg-[#3a521e]/80 border-2 border-[#2b3e15] shadow-[inset_0_3px_6px_rgba(0,0,0,0.4)] ${sizeClasses}`}
+        className={`relative flex items-center justify-center rounded-2xl select-none transition-all duration-300 bg-white/90 border-2 border-amber-200/90 shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)] hover:border-amber-300 ${sizeClasses}`}
       >
-        <span className="w-2 h-2 rounded-full bg-[#52752c]/50" />
+        <span className="w-2 h-2 rounded-full bg-amber-300/70" />
       </div>
     );
   }

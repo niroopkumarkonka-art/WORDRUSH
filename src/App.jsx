@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { socketService } from "./services/socket";
-import { soundManager } from "./services/audio";
 import { classifyWord } from "./utils/wordClassifier";
 import { RealisticBackground } from "./components/RealisticBackground";
 import { Logo } from "./components/Logo";
@@ -52,7 +51,7 @@ export default function App() {
     try {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get("room")) return "MULTIPLAYER";
-    } catch {}
+    } catch { }
     return "LANDING";
   });
   const [adminUser, setAdminUser] = useState(null);
@@ -95,12 +94,6 @@ export default function App() {
   const [isUserDashboardOpen, setIsUserDashboardOpen] = useState(false);
   const [isRulesOpen, setIsRulesOpen] = useState(false);
   const [isAnagramModalOpen, setIsAnagramModalOpen] = useState(false);
-  const [isMuted, setIsMuted] = useState(() => soundManager.isMuted());
-
-  const handleToggleMute = () => {
-    const next = soundManager.toggleMute();
-    setIsMuted(next);
-  };
 
   // --------------------------------------------------------------------------
   // Room & Game State (Strictly Multiplayer)
@@ -188,7 +181,6 @@ export default function App() {
     });
 
     socketService.on("ROOM_CREATED", (data) => {
-      soundManager.playSuccess();
       if (data.room) {
         setRoom(data.room);
         setCurrentView("MULTIPLAYER");
@@ -198,7 +190,6 @@ export default function App() {
     });
 
     socketService.on("JOINED_SUCCESS", (data) => {
-      soundManager.playSuccess();
       if (data.room) {
         setRoom(data.room);
         setCurrentView("MULTIPLAYER");
@@ -208,7 +199,6 @@ export default function App() {
     });
 
     socketService.on("ROOM_JOINED", (data) => {
-      soundManager.playSuccess();
       if (data.room) {
         setRoom(data.room);
         setCurrentView("MULTIPLAYER");
@@ -219,27 +209,22 @@ export default function App() {
 
     socketService.on("GUESS_FEEDBACK", (data) => {
       if (data.isCorrect) {
-        soundManager.playSuccess();
         confetti({
           particleCount: 90,
           spread: 80,
           origin: { y: 0.6 },
           colors: ["#10b981", "#3b82f6", "#f59e0b", "#ec4899"],
         });
-      } else {
-        soundManager.playTileFlip();
       }
     });
 
     socketService.on("HINT_REVEALED", (data) => {
       setLastRevealedHint(data.hintText);
-      soundManager.playHint();
       addToast("info", data.hintText, "Gemini AI Clue");
     });
 
     socketService.on("COUNTDOWN", (data) => {
       setCountdownSeconds(data.seconds);
-      soundManager.playCountdown();
       if (data.seconds === 0) {
         setTimeout(() => setCountdownSeconds(null), 500);
       }
@@ -247,28 +232,22 @@ export default function App() {
 
     socketService.on("BATTLE_COUNTDOWN", (data) => {
       setCountdownSeconds(data.seconds);
-      soundManager.playCountdown();
       if (data.seconds === 0) {
         setTimeout(() => setCountdownSeconds(null), 500);
       }
     });
 
     socketService.on("PLAYER_DISCONNECTED", (data) => {
-      soundManager.playRoundLost();
       addToast("warning", data.message || "Opponent pilot disconnected", "Telemetry Alert");
     });
 
     socketService.on("ROUND_ENDED", (data) => {
       if (data.wordFound) {
-        soundManager.playSuccess();
         confetti({ particleCount: 110, spread: 90, origin: { y: 0.5 } });
-      } else {
-        soundManager.playRoundLost();
       }
     });
 
     socketService.on("GAME_OVER", () => {
-      soundManager.playGameOver();
       confetti({ particleCount: 160, spread: 120, origin: { y: 0.4 } });
     });
 
@@ -278,19 +257,16 @@ export default function App() {
         ...prev,
         { id, emote: data.emote, senderName: data.senderName },
       ]);
-      soundManager.playPop();
       setTimeout(() => {
         setFloatingEmotes((prev) => prev.filter((item) => item.id !== id));
       }, 3500);
     });
 
     socketService.on("SYSTEM_BROADCAST", (data) => {
-      soundManager.playPop();
       addToast("info", data.message, "Oasis Broadcast");
     });
 
     socketService.on("ERROR", (err) => {
-      soundManager.playError();
       setIsBoardShake(true);
       setTimeout(() => setIsBoardShake(false), 500);
       addToast("error", err.message);
@@ -326,17 +302,20 @@ export default function App() {
   const handleCreateRoom = async (overrideWordLength, overrideTotalRounds) => {
     const wLen = Number(overrideWordLength) || createRoomWordLength || 5;
     const tRounds = Number(overrideTotalRounds) || createRoomTotalRounds || 3;
-    soundManager.playKeyClick();
-    if (socketService.connected) {
-      socketService.send("CREATE_ROOM", {
-        playerId,
-        username,
-        avatar,
-        wordLength: wLen,
-        totalRounds: tRounds,
-      });
-      setCurrentView("MULTIPLAYER");
-    } else {
+    
+    // Dispatch via socketService
+    socketService.send("CREATE_ROOM", {
+      playerId,
+      username,
+      avatar,
+      wordLength: wLen,
+      totalRounds: tRounds,
+    });
+    setCurrentView("MULTIPLAYER");
+    setIsMatchmakerOpen(false);
+
+    // Call REST endpoint if socket is not immediately open
+    if (!socketService.connected) {
       try {
         const res = await fetch("/api/rooms/create", {
           method: "POST",
@@ -352,18 +331,10 @@ export default function App() {
         const data = await res.json();
         if (data.success && data.room) {
           setRoom(data.room);
-          setCurrentView("MULTIPLAYER");
           addToast("success", `Game room created! Share code: ${data.roomCode}`, "Room Ready");
-        } else {
-          throw new Error(data.error || "Failed to create room");
         }
       } catch (err) {
-        soundManager.playError();
-        const diff = wLen === 4 ? "EASY" : wLen === 6 ? "HARD" : "MEDIUM";
-        setPuzzleDifficulty(diff);
-        setIsPuzzleModeActive(true);
-        setCurrentView("PUZZLES");
-        addToast("info", `Multiplayer offline. Launched ${diff} (${wLen}-letter) Solo Game!`, "Offline Mode");
+        console.warn("REST create room note:", err?.message);
       }
     }
   };
@@ -371,41 +342,33 @@ export default function App() {
   const handlePlayBot = (overrideWordLength, overrideTotalRounds) => {
     const wLen = Number(overrideWordLength) || createRoomWordLength || 5;
     const tRounds = Number(overrideTotalRounds) || createRoomTotalRounds || 3;
-    soundManager.playKeyClick();
-    if (socketService.connected) {
-      socketService.send("CREATE_BOT_MATCH", {
-        playerId,
-        username,
-        avatar,
-        wordLength: wLen,
-        totalRounds: tRounds,
-      });
-      setCurrentView("MULTIPLAYER");
-    } else {
-      const diff = wLen === 4 ? "EASY" : wLen === 6 ? "HARD" : "MEDIUM";
-      setPuzzleDifficulty(diff);
-      setIsPuzzleModeActive(true);
-      setCurrentView("PUZZLES");
-      addToast("info", `Launched ${diff} (${wLen}-letter) Practice Game!`, "Practice Mode");
-    }
+    socketService.send("CREATE_BOT_MATCH", {
+      playerId,
+      username,
+      avatar,
+      wordLength: wLen,
+      totalRounds: tRounds,
+    });
+    setCurrentView("MULTIPLAYER");
+    setIsMatchmakerOpen(false);
   };
 
   const handleJoinRoom = async (codeToJoin) => {
     const cleanCode = (codeToJoin || joinCodeInput).trim().toUpperCase();
     if (cleanCode.length !== 5) {
-      soundManager.playError();
       addToast("warning", "Room code must be exactly 5 letters.");
       return;
     }
-    soundManager.playKeyClick();
-    if (socketService.connected) {
-      socketService.send("JOIN_ROOM", {
-        roomCode: cleanCode,
-        playerId,
-        username,
-        avatar,
-      });
-    } else {
+
+    socketService.send("JOIN_ROOM", {
+      roomCode: cleanCode,
+      playerId,
+      username,
+      avatar,
+    });
+    setIsMatchmakerOpen(false);
+
+    if (!socketService.connected) {
       try {
         const res = await fetch("/api/rooms/join", {
           method: "POST",
@@ -423,10 +386,9 @@ export default function App() {
           setCurrentView("MULTIPLAYER");
           addToast("success", `Joined room ${data.roomCode}!`, "Ready to Play");
         } else {
-          throw new Error(data.error || "Failed to join room");
+          addToast("error", data.error || "Failed to join room");
         }
       } catch (err) {
-        soundManager.playError();
         addToast("error", err.message || "Failed to join room");
       }
     }
@@ -443,7 +405,6 @@ export default function App() {
 
   const handleToggleReady = () => {
     if (!room) return;
-    soundManager.playKeyClick();
     socketService.send("TOGGLE_READY", {
       roomCode: room.roomCode,
       playerId,
@@ -452,7 +413,6 @@ export default function App() {
 
   const handleUpdateConfig = (wordLength, totalRounds) => {
     if (!room) return;
-    soundManager.playKeyClick();
     socketService.send("UPDATE_CONFIG", {
       roomCode: room.roomCode,
       playerId,
@@ -467,7 +427,6 @@ export default function App() {
     const clean = secretWordInput.trim().toUpperCase();
 
     if (clean.length !== room.wordLength) {
-      soundManager.playError();
       addToast("warning", `Cipher must be exactly ${room.wordLength} characters.`);
       return;
     }
@@ -475,7 +434,6 @@ export default function App() {
     const seen = new Set();
     for (const c of clean) {
       if (seen.has(c)) {
-        soundManager.playError();
         addToast(
           "error",
           "Duplicate letters detected! Secret ciphers must contain strictly unique characters.",
@@ -493,19 +451,16 @@ export default function App() {
       word: clean,
     });
     setSecretWordInput("");
-    soundManager.playSuccess();
   };
 
   const handleCharInput = (char) => {
     if (!room) return;
     if (currentGuessInput.length < room.wordLength) {
-      soundManager.playKeyClick();
       setCurrentGuessInput((prev) => prev + char);
     }
   };
 
   const handleDeleteInput = () => {
-    soundManager.playKeyClick();
     setCurrentGuessInput((prev) => prev.slice(0, -1));
   };
 
@@ -513,7 +468,6 @@ export default function App() {
     if (!room) return;
     const wordToSubmit = (customWord || currentGuessInput).trim().toUpperCase();
     if (wordToSubmit.length !== room.wordLength) {
-      soundManager.playError();
       setIsBoardShake(true);
       setTimeout(() => setIsBoardShake(false), 500);
       addToast("warning", `Cipher guess must be ${room.wordLength} characters.`);
@@ -538,7 +492,6 @@ export default function App() {
 
   const handleSendEmote = (emote) => {
     if (!room) return;
-    soundManager.playPop();
     socketService.send("SEND_EMOTE", {
       roomCode: room.roomCode,
       playerId,
@@ -629,9 +582,8 @@ export default function App() {
                 {/* Live Connection Status */}
                 <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-white/20 text-[#bbf7d0] border border-white/30 shadow-xs">
                   <span
-                    className={`w-2 h-2 rounded-full ${
-                      isConnected ? "bg-emerald-400 animate-pulse" : "bg-rose-400"
-                    }`}
+                    className={`w-2 h-2 rounded-full ${isConnected ? "bg-emerald-400 animate-pulse" : "bg-rose-400"
+                      }`}
                   />
                   <span>{isConnected ? "Arena Live" : "Connecting..."}</span>
                 </div>
@@ -729,439 +681,436 @@ export default function App() {
       ) : (
         <main className="flex-1 w-full max-w-7xl mx-auto p-3 sm:p-6 flex flex-col justify-center relative z-10">
 
-        {/* ACTIVE MULTIPLAYER LOBBY (When room is created/joined) */}
-        {currentView === "MULTIPLAYER" && room && room.phase === "LOBBY" && (
-          <div className="w-full max-w-2xl mx-auto flex flex-col items-center gap-5 my-auto animate-fadeIn">
-            <div className="w-full flex items-center justify-between gap-3">
-              <button
-                id="lobby-leave-room-btn"
-                onClick={handleLeaveRoom}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/95 hover:bg-white text-rose-600 hover:text-rose-700 font-black text-xs uppercase tracking-wider border-2 border-rose-200 hover:border-rose-400 shadow-[0_4px_12px_rgba(225,29,72,0.2)] transition-all hover:scale-105 active:scale-95 cursor-pointer"
-              >
-                <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
-                <span>Leave Game Room</span>
-              </button>
-              <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#fef08a] border-2 border-amber-300 text-amber-950 font-black text-xs uppercase tracking-wider shadow-md">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-600 animate-ping" />
-                <span>WAITING FOR PLAYERS</span>
+          {/* ACTIVE MULTIPLAYER LOBBY (When room is created/joined) */}
+          {currentView === "MULTIPLAYER" && room && room.phase === "LOBBY" && (
+            <div className="w-full max-w-2xl mx-auto flex flex-col items-center gap-5 my-auto animate-fadeIn">
+              <div className="w-full flex items-center justify-between gap-3">
+                <button
+                  id="lobby-leave-room-btn"
+                  onClick={handleLeaveRoom}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/95 hover:bg-white text-rose-600 hover:text-rose-700 font-black text-xs uppercase tracking-wider border-2 border-rose-200 hover:border-rose-400 shadow-[0_4px_12px_rgba(225,29,72,0.2)] transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
+                  <span>Leave Game Room</span>
+                </button>
+                <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#fef08a] border-2 border-amber-300 text-amber-950 font-black text-xs uppercase tracking-wider shadow-md">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-600 animate-ping" />
+                  <span>WAITING FOR PLAYERS</span>
+                </div>
               </div>
-            </div>
 
-            {/* Room Code Card */}
-            <RoomCode roomCode={room.roomCode} />
+              {/* Room Code Card */}
+              <RoomCode roomCode={room.roomCode} />
 
-            {/* Players List */}
-            <div className="w-full flex flex-col sm:flex-row gap-3">
-              <PlayerCard
-                player={room.players[0] || null}
-                playerIndex={0}
-                isWordSetter={false}
-                isGuesser={false}
-                isCurrentTurn={false}
-                isSelf={room.players[0]?.playerId === playerId}
-              />
-              <PlayerCard
-                player={room.players[1] || null}
-                playerIndex={1}
-                isWordSetter={false}
-                isGuesser={false}
-                isCurrentTurn={false}
-                isSelf={room.players[1]?.playerId === playerId}
-              />
-            </div>
+              {/* Players List */}
+              <div className="w-full flex flex-col sm:flex-row gap-3">
+                <PlayerCard
+                  player={room.players[0] || null}
+                  playerIndex={0}
+                  isWordSetter={false}
+                  isGuesser={false}
+                  isCurrentTurn={false}
+                  isSelf={room.players[0]?.playerId === playerId}
+                />
+                <PlayerCard
+                  player={room.players[1] || null}
+                  playerIndex={1}
+                  isWordSetter={false}
+                  isGuesser={false}
+                  isCurrentTurn={false}
+                  isSelf={room.players[1]?.playerId === playerId}
+                />
+              </div>
 
-            {/* Game Configuration */}
-            <div className="w-full p-5 rounded-3xl bg-white/95 border-2 border-amber-200 flex flex-col gap-3 shadow-md">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-700">
-                  GAME SETTINGS
-                </span>
-                {!isHost && (
-                  <span className="text-[11px] text-slate-400 italic">
-                    (Chosen by Room Host)
+              {/* Game Configuration */}
+              <div className="w-full p-5 rounded-3xl bg-white/95 border-2 border-amber-200 flex flex-col gap-3 shadow-md">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-700">
+                    GAME SETTINGS
                   </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[11px] font-bold text-slate-500 block mb-1.5">
-                    WORD LENGTH
-                  </label>
-                  <div className="flex gap-2">
-                    {[4, 5, 6].map((len) => (
-                      <button
-                        key={len}
-                        disabled={!isHost}
-                        onClick={() => handleUpdateConfig(len, room.totalRounds)}
-                        className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all cursor-pointer ${
-                          room.wordLength === len
-                            ? "bg-amber-400 text-amber-950 border-2 border-amber-500 shadow-sm"
-                            : "bg-slate-50 text-slate-600 border-2 border-slate-200 hover:bg-slate-100"
-                        } disabled:opacity-75 disabled:cursor-not-allowed`}
-                      >
-                        {len} Letters
-                      </button>
-                    ))}
-                  </div>
+                  {!isHost && (
+                    <span className="text-[11px] text-slate-400 italic">
+                      (Chosen by Room Host)
+                    </span>
+                  )}
                 </div>
 
-                <div>
-                  <label className="text-[11px] font-bold text-slate-500 block mb-1.5">
-                    NUMBER OF ROUNDS
-                  </label>
-                  <div className="flex gap-2">
-                    {[3, 5].map((rnd) => (
-                      <button
-                        key={rnd}
-                        disabled={!isHost}
-                        onClick={() => handleUpdateConfig(room.wordLength, rnd)}
-                        className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all cursor-pointer ${
-                          room.totalRounds === rnd
-                            ? "bg-amber-400 text-amber-950 border-2 border-amber-500 shadow-sm"
-                            : "bg-slate-50 text-slate-600 border-2 border-slate-200 hover:bg-slate-100"
-                        } disabled:opacity-75 disabled:cursor-not-allowed`}
-                      >
-                        {rnd} Rounds
-                      </button>
-                    ))}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-500 block mb-1.5">
+                      WORD LENGTH
+                    </label>
+                    <div className="flex gap-2">
+                      {[4, 5, 6].map((len) => (
+                        <button
+                          key={len}
+                          disabled={!isHost}
+                          onClick={() => handleUpdateConfig(len, room.totalRounds)}
+                          className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all cursor-pointer ${room.wordLength === len
+                              ? "bg-amber-400 text-amber-950 border-2 border-amber-500 shadow-sm"
+                              : "bg-slate-50 text-slate-600 border-2 border-slate-200 hover:bg-slate-100"
+                            } disabled:opacity-75 disabled:cursor-not-allowed`}
+                        >
+                          {len} Letters
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-500 block mb-1.5">
+                      NUMBER OF ROUNDS
+                    </label>
+                    <div className="flex gap-2">
+                      {[3, 5].map((rnd) => (
+                        <button
+                          key={rnd}
+                          disabled={!isHost}
+                          onClick={() => handleUpdateConfig(room.wordLength, rnd)}
+                          className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all cursor-pointer ${room.totalRounds === rnd
+                              ? "bg-amber-400 text-amber-950 border-2 border-amber-500 shadow-sm"
+                              : "bg-slate-50 text-slate-600 border-2 border-slate-200 hover:bg-slate-100"
+                            } disabled:opacity-75 disabled:cursor-not-allowed`}
+                        >
+                          {rnd} Rounds
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Ready Status Button */}
-            <div className="w-full flex flex-col items-center gap-2">
-              <button
-                id="ready-toggle-btn"
-                onClick={handleToggleReady}
-                className={`w-full py-4 px-6 rounded-2xl font-black text-base uppercase tracking-wider shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer ${
-                  room.players.find((p) => p.playerId === playerId)?.readyStatus
-                    ? "btn-candy-green text-white"
-                    : "btn-candy-yellow text-amber-950"
-                }`}
-              >
-                {room.players.find((p) => p.playerId === playerId)?.readyStatus ? (
-                  <>
-                    <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
-                    <span>READY! (TAP TO UNREADY)</span>
-                  </>
+              {/* Ready Status Button */}
+              <div className="w-full flex flex-col items-center gap-2">
+                <button
+                  id="ready-toggle-btn"
+                  onClick={handleToggleReady}
+                  className={`w-full py-4 px-6 rounded-2xl font-black text-base uppercase tracking-wider shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer ${room.players.find((p) => p.playerId === playerId)?.readyStatus
+                      ? "btn-candy-green text-white"
+                      : "btn-candy-yellow text-amber-950"
+                    }`}
+                >
+                  {room.players.find((p) => p.playerId === playerId)?.readyStatus ? (
+                    <>
+                      <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
+                      <span>READY! (TAP TO UNREADY)</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5 stroke-[2.5]" />
+                      <span>I'M READY TO PLAY!</span>
+                    </>
+                  )}
+                </button>
+
+                {room.playerCount < 2 ? (
+                  <p className="text-xs text-amber-800 font-bold flex items-center gap-1 mt-1">
+                    <span>🎮 Share the room code with Player 2 to join...</span>
+                  </p>
                 ) : (
-                  <>
-                    <Sparkles className="w-5 h-5 stroke-[2.5]" />
-                    <span>I'M READY TO PLAY!</span>
-                  </>
+                  <p className="text-xs text-slate-500 font-medium">
+                    The game starts as soon as both players are READY!
+                  </p>
                 )}
-              </button>
-
-              {room.playerCount < 2 ? (
-                <p className="text-xs text-amber-800 font-bold flex items-center gap-1 mt-1">
-                  <span>🎮 Share the room code with Player 2 to join...</span>
-                </p>
-              ) : (
-                <p className="text-xs text-slate-500 font-medium">
-                  The game starts as soon as both players are READY!
-                </p>
-              )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ACTIVE COMBAT BATTLE ARENA */}
-        {room && room.phase !== "LOBBY" && (
-          <div className="w-full max-w-5xl mx-auto flex flex-col items-center gap-4 animate-fadeIn">
-            {/* Scoreboard */}
-            <Scoreboard
-              roundNumber={room.currentRoundIndex + 1}
-              totalRounds={room.totalRounds}
-              wordLength={room.wordLength}
-              players={room.players}
-              activeSetterName={wordSetter?.username || "Cipher Setter"}
-              activeGuesserName={guesser?.username || "Decoder"}
-              phase={room.phase}
-              onOpenRules={() => setIsRulesOpen(true)}
-              onLeaveRoom={() => {
-                if (window.confirm("Leave current match and return to home?")) {
-                  handleLeaveRoom();
-                  setCurrentView("LANDING");
-                }
-              }}
-            />
+          {/* ACTIVE COMBAT BATTLE ARENA */}
+          {room && room.phase !== "LOBBY" && (
+            <div className="w-full max-w-5xl mx-auto flex flex-col items-center gap-4 animate-fadeIn">
+              {/* Scoreboard */}
+              <Scoreboard
+                roundNumber={room.currentRoundIndex + 1}
+                totalRounds={room.totalRounds}
+                wordLength={room.wordLength}
+                players={room.players}
+                activeSetterName={wordSetter?.username || "Cipher Setter"}
+                activeGuesserName={guesser?.username || "Decoder"}
+                phase={room.phase}
+                onOpenRules={() => setIsRulesOpen(true)}
+                onLeaveRoom={() => {
+                  if (window.confirm("Leave current match and return to home?")) {
+                    handleLeaveRoom();
+                    setCurrentView("LANDING");
+                  }
+                }}
+              />
 
-            {/* PHASE A: WORD SELECTION */}
-            {room.phase === "WORD_SELECTION" && (
-              <div className="w-full max-w-lg p-6 sm:p-8 rounded-3xl bg-white/95 border-4 border-amber-300 flex flex-col items-center text-center gap-4 shadow-xl">
-                {isWordSetter ? (
-                  <>
-                    <div className="w-14 h-14 rounded-2xl bg-amber-100 border-2 border-amber-300 text-amber-800 flex items-center justify-center shadow-sm">
-                      <Sparkles className="w-7 h-7 stroke-[2.5]" />
-                    </div>
-
-                    <div>
-                      <h3 className="text-xl sm:text-2xl font-black uppercase text-slate-800 tracking-wide">
-                        YOU PICK THE SECRET WORD!
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Choose a <strong className="text-amber-700">{room.wordLength}-letter</strong> word for your opponent to guess.
-                      </p>
-                    </div>
-
-                    {/* Word Preview Banner */}
-                    <div className="py-1">
-                      <WordCandyBanner
-                        word={secretWordInput}
-                        targetLength={room.wordLength}
-                        placeholder={`TYPE ${room.wordLength}-LETTER WORD`}
-                      />
-                    </div>
-
-                    {/* Rules reminder & Dictionary Helper */}
-                    <div className="w-full flex items-center justify-between gap-2">
-                      <div className="p-2.5 rounded-2xl bg-amber-50/80 border border-amber-200 text-left text-xs space-y-0.5 text-slate-700 flex-1">
-                        <div className="text-amber-800 font-extrabold uppercase text-[11px] flex items-center gap-1.5">
-                          <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                          <span>WORD RULES ({room.wordLength} LETTERS, NO DUPLICATES):</span>
-                        </div>
-                        <div className="text-[11px] text-slate-600">Must be an official English word with unique letters (e.g. CRANE).</div>
+              {/* PHASE A: WORD SELECTION */}
+              {room.phase === "WORD_SELECTION" && (
+                <div className="w-full max-w-lg p-6 sm:p-8 rounded-3xl bg-white/95 border-4 border-amber-300 flex flex-col items-center text-center gap-4 shadow-xl">
+                  {isWordSetter ? (
+                    <>
+                      <div className="w-14 h-14 rounded-2xl bg-amber-100 border-2 border-amber-300 text-amber-800 flex items-center justify-center shadow-sm">
+                        <Sparkles className="w-7 h-7 stroke-[2.5]" />
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setIsDictionaryHelperOpen(true)}
-                        className="px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-black text-xs shadow-sm hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
-                        title="Browse verified dictionary words"
-                      >
-                        <Sparkles className="w-3.5 h-3.5 text-teal-200" />
-                        <span>Dictionary Helper</span>
-                      </button>
-                    </div>
 
-                    <form onSubmit={handleSubmitSecretWord} className="w-full flex flex-col gap-3">
-                      <input
-                        id="secret-word-input"
-                        type="text"
-                        maxLength={room.wordLength}
-                        value={secretWordInput}
-                        onChange={(e) => setSecretWordInput(e.target.value.toUpperCase())}
-                        placeholder={`ENTER ${room.wordLength}-LETTER WORD`}
-                        className="w-full px-4 py-3 rounded-2xl bg-slate-50 border-2 border-amber-300 text-slate-800 text-center font-black text-xl uppercase tracking-widest focus:outline-none focus:border-amber-500 focus:bg-white shadow-inner"
-                        autoFocus
-                      />
+                      <div>
+                        <h3 className="text-xl sm:text-2xl font-black uppercase text-slate-800 tracking-wide">
+                          YOU PICK THE SECRET WORD!
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Choose a <strong className="text-amber-700">{room.wordLength}-letter</strong> word for your opponent to guess.
+                        </p>
+                      </div>
 
-                      {/* Rendered Word Candy Preview */}
-                      {secretWordInput.length > 0 && (
-                        <div className="py-2 flex justify-center">
-                          <WordCandyBanner word={secretWordInput} />
+                      {/* Word Preview Banner */}
+                      <div className="py-1">
+                        <WordCandyBanner
+                          word={secretWordInput}
+                          targetLength={room.wordLength}
+                          placeholder={`TYPE ${room.wordLength}-LETTER WORD`}
+                        />
+                      </div>
+
+                      {/* Rules reminder & Dictionary Helper */}
+                      <div className="w-full flex items-center justify-between gap-2">
+                        <div className="p-2.5 rounded-2xl bg-amber-50/80 border border-amber-200 text-left text-xs space-y-0.5 text-slate-700 flex-1">
+                          <div className="text-amber-800 font-extrabold uppercase text-[11px] flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                            <span>WORD RULES ({room.wordLength} LETTERS, NO DUPLICATES):</span>
+                          </div>
+                          <div className="text-[11px] text-slate-600">Must be an official English word with unique letters (e.g. CRANE).</div>
                         </div>
-                      )}
+                        <button
+                          type="button"
+                          onClick={() => setIsDictionaryHelperOpen(true)}
+                          className="px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-black text-xs shadow-sm hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
+                          title="Browse verified dictionary words"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-teal-200" />
+                          <span>Dictionary Helper</span>
+                        </button>
+                      </div>
 
-                      {/* Real-time Word/Name Classification Indicator */}
-                      {secretWordInput.length > 0 && (() => {
-                        const info = classifyWord(secretWordInput);
-                        return (
-                          <div className="flex flex-col gap-1.5 p-2 rounded-xl bg-amber-50/90 border border-amber-200 text-xs">
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-slate-600">Lexical Detection:</span>
-                              <span className={`px-2.5 py-0.5 rounded-full font-black border flex items-center gap-1.5 ${info.badgeColor}`}>
-                                <span>{info.icon}</span>
-                                <span>{info.label}</span>
-                              </span>
-                            </div>
-                            {info.note && (
-                              <div className="p-2 rounded-lg bg-purple-100/80 border border-purple-300 text-purple-950 font-bold text-[11px] text-left">
-                                {info.note}
+                      <form onSubmit={handleSubmitSecretWord} className="w-full flex flex-col gap-3">
+                        <input
+                          id="secret-word-input"
+                          type="text"
+                          maxLength={room.wordLength}
+                          value={secretWordInput}
+                          onChange={(e) => setSecretWordInput(e.target.value.toUpperCase())}
+                          placeholder={`ENTER ${room.wordLength}-LETTER WORD`}
+                          className="w-full px-4 py-3 rounded-2xl bg-slate-50 border-2 border-amber-300 text-slate-800 text-center font-black text-xl uppercase tracking-widest focus:outline-none focus:border-amber-500 focus:bg-white shadow-inner"
+                          autoFocus
+                        />
+
+                        {/* Rendered Word Candy Preview */}
+                        {secretWordInput.length > 0 && (
+                          <div className="py-2 flex justify-center">
+                            <WordCandyBanner word={secretWordInput} />
+                          </div>
+                        )}
+
+                        {/* Real-time Word/Name Classification Indicator */}
+                        {secretWordInput.length > 0 && (() => {
+                          const info = classifyWord(secretWordInput);
+                          return (
+                            <div className="flex flex-col gap-1.5 p-2 rounded-xl bg-amber-50/90 border border-amber-200 text-xs">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-slate-600">Lexical Detection:</span>
+                                <span className={`px-2.5 py-0.5 rounded-full font-black border flex items-center gap-1.5 ${info.badgeColor}`}>
+                                  <span>{info.icon}</span>
+                                  <span>{info.label}</span>
+                                </span>
                               </div>
-                            )}
+                              {info.note && (
+                                <div className="p-2 rounded-lg bg-purple-100/80 border border-purple-300 text-purple-950 font-bold text-[11px] text-left">
+                                  {info.note}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+
+                        {secretWordDuplicates && (
+                          <div className="text-xs font-bold text-rose-700 bg-rose-50 p-2.5 rounded-xl border border-rose-300 flex items-center justify-center gap-1.5 animate-shake">
+                            <AlertCircle className="w-4 h-4 text-rose-500" />
+                            <span>No repeating letters allowed! All letters must be unique.</span>
                           </div>
-                        );
-                      })()}
+                        )}
 
-                      {secretWordDuplicates && (
-                        <div className="text-xs font-bold text-rose-700 bg-rose-50 p-2.5 rounded-xl border border-rose-300 flex items-center justify-center gap-1.5 animate-shake">
-                          <AlertCircle className="w-4 h-4 text-rose-500" />
-                          <span>No repeating letters allowed! All letters must be unique.</span>
-                        </div>
-                      )}
-
-                      <button
-                        id="submit-secret-word-btn"
-                        type="submit"
-                        disabled={secretWordInput.length !== room.wordLength || secretWordDuplicates}
-                        className="w-full py-4 rounded-2xl btn-candy-green text-white font-black text-sm uppercase tracking-wider transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                      >
-                        <Send className="w-4 h-4 stroke-[2.5]" />
-                        <span>LOCK IN SECRET WORD</span>
-                      </button>
-                    </form>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-14 h-14 rounded-2xl bg-amber-100 border-2 border-amber-300 text-amber-700 flex items-center justify-center animate-bounce">
-                      <Sparkles className="w-7 h-7" />
-                    </div>
-
-                    <div>
-                      <h3 className="text-xl sm:text-2xl font-black uppercase text-slate-800 tracking-wide">
-                        WAITING FOR SECRET WORD
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-1">
-                        <strong className="text-amber-800">{wordSetter?.username}</strong> is picking a {room.wordLength}-letter secret word.
-                      </p>
-                    </div>
-
-                    <div className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col items-center gap-2 text-slate-500 text-xs">
-                      <div className="flex gap-2">
-                        {Array.from({ length: room.wordLength }).map((_, i) => (
-                          <div
-                            key={i}
-                            className="w-9 h-10 rounded-xl bg-white border-2 border-dashed border-amber-300 flex items-center justify-center text-amber-600 font-black text-lg animate-pulse"
-                          >
-                            ?
-                          </div>
-                        ))}
+                        <button
+                          id="submit-secret-word-btn"
+                          type="submit"
+                          disabled={secretWordInput.length !== room.wordLength || secretWordDuplicates}
+                          className="w-full py-4 rounded-2xl btn-candy-green text-white font-black text-sm uppercase tracking-wider transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                        >
+                          <Send className="w-4 h-4 stroke-[2.5]" />
+                          <span>LOCK IN SECRET WORD</span>
+                        </button>
+                      </form>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-14 h-14 rounded-2xl bg-amber-100 border-2 border-amber-300 text-amber-700 flex items-center justify-center animate-bounce">
+                        <Sparkles className="w-7 h-7" />
                       </div>
-                      <span className="text-[11px] font-bold text-slate-400">Get ready to guess!</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
 
-            {/* PHASE B: ACTIVE GUESSING */}
-            {room.phase === "GUESSING" && room.currentRound && (
-              <div className="w-full max-w-5xl mx-auto flex flex-col lg:flex-row items-center lg:items-start justify-center gap-6 lg:gap-10">
-                {/* LEFT: GameBoard & AI Hint Panel */}
-                <div className="flex flex-col items-center gap-3 w-full lg:w-auto">
-                  <GameBoard
-                    wordLength={room.wordLength}
-                    maxAttempts={6}
-                    gameBoard={room.currentRound.gameBoard}
-                    boardStates={room.currentRound.boardStates}
-                    attemptsUsed={room.currentRound.attemptsUsed}
-                    currentInput={isGuesser ? currentGuessInput : ""}
-                    isGuesserTurn={isGuesser}
-                    isShake={isBoardShake}
-                    targetSecretWord={room.currentRound.secretWord || ""}
-                  />
+                      <div>
+                        <h3 className="text-xl sm:text-2xl font-black uppercase text-slate-800 tracking-wide">
+                          WAITING FOR SECRET WORD
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-1">
+                          <strong className="text-amber-800">{wordSetter?.username}</strong> is picking a {room.wordLength}-letter secret word.
+                        </p>
+                      </div>
 
-                  <HintPanel
-                    freeHintsRemaining={room.currentRound.freeHintsRemaining}
-                    extraHintsUsed={room.currentRound.extraHintsUsed}
-                    lastRevealedHint={lastRevealedHint}
-                    onRequestHint={handleRequestHint}
-                    isGuesser={isGuesser}
-                  />
+                      <div className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col items-center gap-2 text-slate-500 text-xs">
+                        <div className="flex gap-2">
+                          {Array.from({ length: room.wordLength }).map((_, i) => (
+                            <div
+                              key={i}
+                              className="w-9 h-10 rounded-xl bg-white border-2 border-dashed border-amber-300 flex items-center justify-center text-amber-600 font-black text-lg animate-pulse"
+                            >
+                              ?
+                            </div>
+                          ))}
+                        </div>
+                        <span className="text-[11px] font-bold text-slate-400">Get ready to guess!</span>
+                      </div>
+                    </>
+                  )}
                 </div>
+              )}
 
-                {/* RIGHT: Active Input Banner + Circular Gesture Wheel */}
-                <div className="flex flex-col items-center gap-4 w-full lg:w-auto">
-                  <WordCandyBanner
-                    word={isGuesser ? currentGuessInput : ""}
-                    targetLength={room.wordLength}
-                    isError={isBoardShake}
-                    firstCharMatch={Boolean(
-                      isGuesser &&
+              {/* PHASE B: ACTIVE GUESSING */}
+              {room.phase === "GUESSING" && room.currentRound && (
+                <div className="w-full max-w-5xl mx-auto flex flex-col lg:flex-row items-center lg:items-start justify-center gap-6 lg:gap-10">
+                  {/* LEFT: GameBoard & AI Hint Panel */}
+                  <div className="flex flex-col items-center gap-3 w-full lg:w-auto">
+                    <GameBoard
+                      wordLength={room.wordLength}
+                      maxAttempts={6}
+                      gameBoard={room.currentRound.gameBoard}
+                      boardStates={room.currentRound.boardStates}
+                      attemptsUsed={room.currentRound.attemptsUsed}
+                      currentInput={isGuesser ? currentGuessInput : ""}
+                      isGuesserTurn={isGuesser}
+                      isShake={isBoardShake}
+                      targetSecretWord={room.currentRound.secretWord || ""}
+                    />
+
+                    <HintPanel
+                      freeHintsRemaining={room.currentRound.freeHintsRemaining}
+                      extraHintsUsed={room.currentRound.extraHintsUsed}
+                      lastRevealedHint={lastRevealedHint}
+                      onRequestHint={handleRequestHint}
+                      isGuesser={isGuesser}
+                    />
+                  </div>
+
+                  {/* RIGHT: Active Input Banner + Circular Gesture Wheel */}
+                  <div className="flex flex-col items-center gap-4 w-full lg:w-auto">
+                    <WordCandyBanner
+                      word={isGuesser ? currentGuessInput : ""}
+                      targetLength={room.wordLength}
+                      isError={isBoardShake}
+                      firstCharMatch={Boolean(
+                        isGuesser &&
                         currentGuessInput &&
                         room.currentRound?.secretWord &&
                         currentGuessInput[0]?.toUpperCase() ===
-                          room.currentRound.secretWord[0]?.toUpperCase()
-                    )}
-                  />
+                        room.currentRound.secretWord[0]?.toUpperCase()
+                      )}
+                    />
 
-                  {isGuesser ? (
-                    inputMode === "wheel" ? (
-                      <LetterWheel
-                        letters={wheelLetters}
-                        currentInput={currentGuessInput}
-                        onLetterAdd={handleCharInput}
-                        onWordSubmit={handleEnterGuess}
-                        onClear={() => setCurrentGuessInput("")}
-                        onDeleteChar={handleDeleteInput}
-                        onToggleKeyboard={() => setInputMode("keyboard")}
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center gap-2 w-full">
-                        <div className="w-full flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => setInputMode("wheel")}
-                            className="text-xs font-bold text-amber-800 hover:text-amber-950 flex items-center gap-1 px-3 py-1.5 rounded-full bg-white border border-amber-300 shadow-sm cursor-pointer"
-                          >
-                            &bull; Switch to Letter Wheel
-                          </button>
-                        </div>
-                        <Keyboard
-                          onChar={handleCharInput}
-                          onEnter={() => handleEnterGuess()}
-                          onDelete={handleDeleteInput}
-                          letterStates={letterStates}
+                    {isGuesser ? (
+                      inputMode === "wheel" ? (
+                        <LetterWheel
+                          letters={wheelLetters}
+                          currentInput={currentGuessInput}
+                          onLetterAdd={handleCharInput}
+                          onWordSubmit={handleEnterGuess}
+                          onClear={() => setCurrentGuessInput("")}
+                          onDeleteChar={handleDeleteInput}
+                          onToggleKeyboard={() => setInputMode("keyboard")}
                         />
+                      ) : (
+                        <div className="flex flex-col items-center gap-2 w-full">
+                          <div className="w-full flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => setInputMode("wheel")}
+                              className="text-xs font-bold text-amber-800 hover:text-amber-950 flex items-center gap-1 px-3 py-1.5 rounded-full bg-white border border-amber-300 shadow-sm cursor-pointer"
+                            >
+                              &bull; Switch to Letter Wheel
+                            </button>
+                          </div>
+                          <Keyboard
+                            onChar={handleCharInput}
+                            onEnter={() => handleEnterGuess()}
+                            onDelete={handleDeleteInput}
+                            letterStates={letterStates}
+                          />
+                        </div>
+                      )
+                    ) : (
+                      <div className="w-full max-w-sm p-6 rounded-3xl bg-white/95 border-2 border-amber-200 shadow-md flex flex-col items-center text-center gap-3">
+                        <span className="w-4 h-4 rounded-full bg-emerald-500 animate-ping" />
+                        <h4 className="text-base font-black text-slate-800 uppercase">
+                          OPPONENT'S TURN TO GUESS
+                        </h4>
+                        <p className="text-xs text-slate-500 leading-relaxed font-medium">
+                          Watching <strong className="text-amber-800">{guesser?.username}</strong> connect letters in real time...
+                        </p>
                       </div>
-                    )
-                  ) : (
-                    <div className="w-full max-w-sm p-6 rounded-3xl bg-white/95 border-2 border-amber-200 shadow-md flex flex-col items-center text-center gap-3">
-                      <span className="w-4 h-4 rounded-full bg-emerald-500 animate-ping" />
-                      <h4 className="text-base font-black text-slate-800 uppercase">
-                        OPPONENT'S TURN TO GUESS
-                      </h4>
-                      <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                        Watching <strong className="text-amber-800">{guesser?.username}</strong> connect letters in real time...
-                      </p>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Reaction Emote Bar */}
-                  <div className="flex items-center gap-1.5 p-2 rounded-2xl bg-white/95 border-2 border-slate-200 shadow-sm">
-                    <span className="text-xs font-bold text-slate-400 pl-2">REACT:</span>
-                    {["🔥", "🎯", "🤯", "😎", "👏", "⚡", "🎮", "⭐"].map((emoji) => (
-                      <button
-                        key={emoji}
-                        onClick={() => handleSendEmote(emoji)}
-                        className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-amber-100 hover:scale-125 active:scale-95 transition-all text-base flex items-center justify-center cursor-pointer border border-slate-200"
-                        title={`Send ${emoji}`}
-                      >
-                        {emoji}
-                      </button>
-                    ))}
+                    {/* Reaction Emote Bar */}
+                    <div className="flex items-center gap-1.5 p-2 rounded-2xl bg-white/95 border-2 border-slate-200 shadow-sm">
+                      <span className="text-xs font-bold text-slate-400 pl-2">REACT:</span>
+                      {["🔥", "🎯", "🤯", "😎", "👏", "⚡", "🎮", "⭐"].map((emoji) => (
+                        <button
+                          key={emoji}
+                          onClick={() => handleSendEmote(emoji)}
+                          className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-amber-100 hover:scale-125 active:scale-95 transition-all text-base flex items-center justify-center cursor-pointer border border-slate-200"
+                          title={`Send ${emoji}`}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* PHASE C: ROUND RESULT */}
-            {room.phase === "ROUND_RESULT" && room.currentRound && (
-              <div className="w-full max-w-md p-6 sm:p-8 rounded-3xl bg-white/95 border-4 border-amber-300 flex flex-col items-center text-center gap-4 animate-pop shadow-2xl">
-                <div className="w-16 h-16 rounded-2xl bg-amber-100 border-2 border-amber-300 text-amber-700 flex items-center justify-center shadow-md">
-                  <Award className="w-8 h-8 stroke-[2.5]" />
+              {/* PHASE C: ROUND RESULT */}
+              {room.phase === "ROUND_RESULT" && room.currentRound && (
+                <div className="w-full max-w-md p-6 sm:p-8 rounded-3xl bg-white/95 border-4 border-amber-300 flex flex-col items-center text-center gap-4 animate-pop shadow-2xl">
+                  <div className="w-16 h-16 rounded-2xl bg-amber-100 border-2 border-amber-300 text-amber-700 flex items-center justify-center shadow-md">
+                    <Award className="w-8 h-8 stroke-[2.5]" />
+                  </div>
+
+                  <div>
+                    <h3 className="text-2xl font-black uppercase text-slate-800 tracking-wide">
+                      {room.currentRound.wordFound ? "WORD GUESSED!" : "OUT OF GUESSES!"}
+                    </h3>
+                    <p className="text-xs font-bold text-slate-400 mt-1">The secret word was:</p>
+                  </div>
+
+                  <WordCandyBanner word={room.currentRound.secretWord} />
+
+                  <div className="w-full p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-slate-700 font-bold">
+                    Round Winner:{" "}
+                    <strong className="text-amber-900 text-sm font-black">
+                      {room.players.find((p) => p.playerId === room.currentRound?.roundWinnerId)?.username || "Nobody"}
+                    </strong>
+                  </div>
+
+                  <button
+                    id="next-round-btn"
+                    onClick={handleNextRound}
+                    className="w-full py-4 rounded-2xl btn-candy-green text-white font-black text-sm uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                  >
+                    <span>NEXT ROUND &rarr;</span>
+                  </button>
                 </div>
-
-                <div>
-                  <h3 className="text-2xl font-black uppercase text-slate-800 tracking-wide">
-                    {room.currentRound.wordFound ? "WORD GUESSED!" : "OUT OF GUESSES!"}
-                  </h3>
-                  <p className="text-xs font-bold text-slate-400 mt-1">The secret word was:</p>
-                </div>
-
-                <WordCandyBanner word={room.currentRound.secretWord} />
-
-                <div className="w-full p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-slate-700 font-bold">
-                  Round Winner:{" "}
-                  <strong className="text-amber-900 text-sm font-black">
-                    {room.players.find((p) => p.playerId === room.currentRound?.roundWinnerId)?.username || "Nobody"}
-                  </strong>
-                </div>
-
-                <button
-                  id="next-round-btn"
-                  onClick={handleNextRound}
-                  className="w-full py-4 rounded-2xl btn-candy-green text-white font-black text-sm uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                >
-                  <span>NEXT ROUND &rarr;</span>
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </main>
+              )}
+            </div>
+          )}
+        </main>
       )}
 
       {/* -------------------------------------------------------------------- */}
@@ -1199,11 +1148,10 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setMatchmakerTab("host")}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  matchmakerTab === "host"
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${matchmakerTab === "host"
                     ? "bg-emerald-500 text-white shadow-sm"
                     : "text-slate-600 hover:text-slate-900"
-                }`}
+                  }`}
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Host Match</span>
@@ -1211,11 +1159,10 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setMatchmakerTab("join")}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  matchmakerTab === "join"
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${matchmakerTab === "join"
                     ? "bg-sky-500 text-white shadow-sm"
                     : "text-slate-600 hover:text-slate-900"
-                }`}
+                  }`}
               >
                 <DoorOpen className="w-3.5 h-3.5" />
                 <span>Join Code</span>
@@ -1223,11 +1170,10 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setMatchmakerTab("bot")}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  matchmakerTab === "bot"
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${matchmakerTab === "bot"
                     ? "bg-purple-500 text-white shadow-sm"
                     : "text-slate-600 hover:text-slate-900"
-                }`}
+                  }`}
               >
                 <Zap className="w-3.5 h-3.5" />
                 <span>AI Practice</span>
@@ -1253,11 +1199,10 @@ export default function App() {
                         key={len}
                         type="button"
                         onClick={() => setCreateRoomWordLength(len)}
-                        className={`flex-1 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border ${
-                          createRoomWordLength === len
+                        className={`flex-1 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border ${createRoomWordLength === len
                             ? "bg-emerald-600 text-white border-emerald-700 shadow-sm scale-105"
                             : "bg-white text-slate-700 border-emerald-200 hover:bg-emerald-100/50"
-                        }`}
+                          }`}
                       >
                         {len} Letters
                       </button>
@@ -1276,11 +1221,10 @@ export default function App() {
                         key={rounds}
                         type="button"
                         onClick={() => setCreateRoomTotalRounds(rounds)}
-                        className={`flex-1 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border ${
-                          createRoomTotalRounds === rounds
+                        className={`flex-1 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border ${createRoomTotalRounds === rounds
                             ? "bg-emerald-600 text-white border-emerald-700 shadow-sm scale-105"
                             : "bg-white text-slate-700 border-emerald-200 hover:bg-emerald-100/50"
-                        }`}
+                          }`}
                       >
                         {rounds} Rounds
                       </button>
@@ -1404,11 +1348,10 @@ export default function App() {
                   <button
                     key={av}
                     onClick={() => handleUpdateProfile({ avatar: av })}
-                    className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xl transition-all cursor-pointer ${
-                      avatar === av
+                    className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xl transition-all cursor-pointer ${avatar === av
                         ? "bg-amber-400 text-amber-950 scale-110 border-2 border-amber-500 shadow-md"
                         : "bg-slate-50 text-slate-700 hover:bg-amber-50 border-2 border-slate-200"
-                    }`}
+                      }`}
                   >
                     {av}
                   </button>

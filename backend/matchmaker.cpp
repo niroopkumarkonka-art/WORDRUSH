@@ -41,9 +41,9 @@ public:
         rng.seed(seed);
     }
 
-    // Generate random 5-character alphanumeric room code (e.g., "7K9BZ")
+    // Generate random 5-letter alphabetical room code (e.g., "KBAQZ")
     std::string generateRoomCode() {
-        const char charset[] = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        const char charset[] = "ABCDEFGHJKLMNPQRSTUVWXYZ";
         const size_t maxIndex = sizeof(charset) - 2;
         std::uniform_int_distribution<size_t> dist(0, maxIndex);
 
