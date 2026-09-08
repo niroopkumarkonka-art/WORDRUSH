@@ -11,35 +11,54 @@ export const Keyboard = ({
   onChar,
   onEnter,
   onDelete,
+  onKeyPress,
   letterStates = {},
+  keyStates = {},
   disabled = false,
 }) => {
+  const handleChar = (char) => {
+    if (typeof onChar === "function") onChar(char);
+    else if (typeof onKeyPress === "function") onKeyPress(char);
+  };
+
+  const handleEnter = () => {
+    if (typeof onEnter === "function") onEnter();
+    else if (typeof onKeyPress === "function") onKeyPress("ENTER");
+  };
+
+  const handleDelete = () => {
+    if (typeof onDelete === "function") onDelete();
+    else if (typeof onKeyPress === "function") onKeyPress("BACKSPACE");
+  };
+
   useEffect(() => {
     if (disabled) return;
 
     const handleKeyDown = (e) => {
       if (
         document.activeElement?.tagName === "INPUT" ||
-        document.activeElement?.tagName === "TEXTAREA"
+        document.activeElement?.tagName === "TEXTAREA" ||
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
       ) {
         return;
       }
 
       if (e.key === "Enter") {
         e.preventDefault();
-        onEnter();
-      } else if (e.key === "Backspace") {
+        handleEnter();
+      } else if (e.key === "Backspace" || e.key === "Delete") {
         e.preventDefault();
-        onDelete();
+        handleDelete();
       } else if (/^[a-zA-Z]$/.test(e.key)) {
         e.preventDefault();
-        onChar(e.key.toUpperCase());
+        handleChar(e.key.toUpperCase());
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onChar, onEnter, onDelete, disabled]);
+  }, [onChar, onEnter, onDelete, onKeyPress, disabled]);
 
   const getKeyStyle = (key) => {
     if (key === "ENTER") {
@@ -49,16 +68,20 @@ export const Keyboard = ({
       return "bg-rose-500 hover:bg-rose-400 text-white font-black shadow-[0_0_15px_rgba(244,63,94,0.3)] border border-rose-400";
     }
 
-    const state = letterStates[key];
-    if (state === 2) {
+    const state = letterStates[key] ?? keyStates[key];
+    const isGreen = state === 2 || state === "GREEN" || state === "green";
+    const isYellow = state === 1 || state === "YELLOW" || state === "yellow";
+    const isGray = state === 0 || state === "GRAY" || state === "gray";
+
+    if (isGreen) {
       // Green
       return "bg-emerald-600 text-white border border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.4)]";
     }
-    if (state === 1) {
+    if (isYellow) {
       // Yellow
       return "bg-amber-400 text-slate-950 border border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.4)]";
     }
-    if (state === 0) {
+    if (isGray) {
       // Gray (Not in word)
       return "bg-slate-900/90 text-slate-500 border border-slate-800 opacity-60";
     }
@@ -82,11 +105,13 @@ export const Keyboard = ({
                 id={`key-${key}`}
                 type="button"
                 disabled={disabled}
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   if (disabled) return;
-                  if (key === "ENTER") onEnter();
-                  else if (key === "DELETE") onDelete();
-                  else onChar(key);
+                  if (key === "ENTER") handleEnter();
+                  else if (key === "DELETE") handleDelete();
+                  else handleChar(key);
                 }}
                 className={`flex items-center justify-center h-10 sm:h-12 rounded-xl text-sm sm:text-base font-mono font-bold transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
                   isSpecial ? "flex-[1.4]" : "flex-1"
