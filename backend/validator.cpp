@@ -4,13 +4,16 @@
 // Tile states: 0 = GRAY (Absent), 1 = YELLOW (Present), 2 = GREEN (Correct), 3 = CYAN (1st Letter Match)
 // ============================================================================
 
-#include <iostream>
 #include <string>
 #include <vector>
 #include <set>
 #include <map>
 #include <algorithm>
 #include <cctype>
+
+#ifdef STANDALONE_VALIDATOR
+#include <iostream>
+#endif
 
 namespace WordRush {
 

@@ -3,12 +3,14 @@
 // Simple Queue ADT (FIFO) for 1v1 multiplayer pairings & 5-letter room codes
 // ============================================================================
 
-#include <iostream>
 #include <string>
-#include <vector>
 #include <queue>
 #include <random>
 #include <chrono>
+
+#ifdef STANDALONE_MATCHMAKER
+#include <iostream>
+#endif
 
 namespace WordRush {
 

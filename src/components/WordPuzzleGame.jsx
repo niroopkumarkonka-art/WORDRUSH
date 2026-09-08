@@ -300,6 +300,47 @@ export const WordPuzzleGame = ({
     hintsRevealed,
   ]);
 
+  // Auto-Solve Current Puzzle Cipher with Points & Confetti
+  const handleAutoSolvePuzzle = useCallback(() => {
+    if (isGameOver) return;
+
+    soundManager.play("win");
+    setCurrentInput("");
+    const newGuesses = [...guesses, targetWord];
+    setGuesses(newGuesses);
+    setHasWon(true);
+    setIsGameOver(true);
+    setStars(3);
+
+    const solverPoints = 65;
+    setLastPointsEarned(solverPoints);
+    setPointsNotification(`+${solverPoints} Points! (Puzzle Solved)`);
+    setTimeout(() => setPointsNotification(null), 3000);
+
+    setPlayerPoints((prev) => {
+      const next = prev + solverPoints;
+      try {
+        localStorage.setItem("wordrush_player_points", String(next));
+      } catch {}
+      return next;
+    });
+
+    const newSolved = solvedCount + 1;
+    setSolvedCount(newSolved);
+    try {
+      localStorage.setItem("wordrush_puzzles_solved", String(newSolved));
+    } catch {}
+
+    try {
+      confetti({
+        particleCount: 90,
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: ["#10b981", "#06b6d4", "#facc15", "#a855f7", "#ec4899"],
+      });
+    } catch {}
+  }, [isGameOver, guesses, targetWord, solvedCount]);
+
   // Handle physical and on-screen key presses
   const handleKeyPress = useCallback(
     (char) => {
@@ -461,6 +502,17 @@ export const WordPuzzleGame = ({
               </div>
 
               <div className="flex items-center gap-3">
+                {/* Auto-Solve Puzzle Button */}
+                <button
+                  onClick={handleAutoSolvePuzzle}
+                  disabled={isGameOver}
+                  className="px-2.5 py-1 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-black text-xs shadow-xs flex items-center gap-1 cursor-pointer transition-all active:scale-95 border border-violet-400 disabled:opacity-50"
+                  title="Automatically solve and decrypt the current puzzle"
+                >
+                  <Zap className="w-3.5 h-3.5 fill-yellow-300 text-yellow-300" />
+                  <span>Auto-Solve Puzzle</span>
+                </button>
+
                 {/* Anagram Solver Trigger Button */}
                 <button
                   onClick={() => setIsAnagramModalOpen(true)}
@@ -583,6 +635,16 @@ export const WordPuzzleGame = ({
               >
                 <RotateCcw className="w-3 h-3" />
                 <span>Get Another Word</span>
+              </button>
+
+              <button
+                onClick={handleAutoSolvePuzzle}
+                disabled={isGameOver}
+                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-black flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-xs disabled:opacity-50"
+                title="Automatically solve this puzzle and earn points"
+              >
+                <Zap className="w-3 h-3 fill-yellow-300 text-yellow-300" />
+                <span>Auto-Solve</span>
               </button>
 
               <button

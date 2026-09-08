@@ -185,6 +185,38 @@ export const AnagramSolver = ({
     }
   }, [challengeInput, foundWords, challengeSolutions, challengeTarget, awardPoints]);
 
+  // Auto-Solve all remaining anagrams in Challenge Mode
+  const handleAutoSolveChallenge = useCallback(() => {
+    if (!challengeSolutions?.anagrams || challengeSolutions.anagrams.length === 0) return;
+    const allWords = challengeSolutions.anagrams.map((a) => a.word);
+    const newFound = new Set(allWords);
+
+    // Calculate points for remaining un-found words
+    let bonusPoints = 0;
+    challengeSolutions.anagrams.forEach((a) => {
+      if (!foundWords.has(a.word)) {
+        bonusPoints += a.points || a.length * 20;
+      }
+    });
+
+    setFoundWords(newFound);
+    setChallengeInput("");
+    setChallengeMessage(`🎉 All Anagram Puzzles Solved! +${bonusPoints} Bonus PTS`);
+
+    if (bonusPoints > 0) {
+      awardPoints(bonusPoints, `Auto-Solved ${challengeSolutions.count} Anagrams`);
+    }
+
+    soundManager.play("win");
+    try {
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+      });
+    } catch {}
+  }, [challengeSolutions, foundWords, awardPoints]);
+
   // Filtered solver results
   const filteredAnagrams = useMemo(() => {
     if (!solverResults?.anagrams) return [];
@@ -473,14 +505,22 @@ export const AnagramSolver = ({
                 ))}
               </div>
 
-              {/* Action Buttons: Shuffle, New Anagram */}
-              <div className="flex items-center gap-2">
+              {/* Action Buttons: Shuffle, Auto-Solve, New Anagram */}
+              <div className="flex items-center flex-wrap justify-center gap-2">
                 <button
                   onClick={handleShuffleChallenge}
                   className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-black text-xs border border-slate-300 shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
                 >
                   <Shuffle className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Re-shuffle Letters</span>
+                  <span>Re-shuffle</span>
+                </button>
+                <button
+                  onClick={handleAutoSolveChallenge}
+                  className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-black text-xs shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 border border-violet-400"
+                  title="Automatically solve all anagrams for these letters"
+                >
+                  <Zap className="w-3.5 h-3.5 fill-yellow-300 text-yellow-300" />
+                  <span>Auto-Solve All</span>
                 </button>
                 <button
                   onClick={handleNextChallenge}

@@ -7,11 +7,13 @@
 //   - Hard: 6 le tters, 1 hint
 // ============================================================================
 
-#include <algorithm>
-#include <iostream>
+#include <cctype>
 #include <stack>
 #include <string>
-#include <vector>
+
+#ifdef STANDALONE_HINTS
+#include <iostream>
+#endif
 
 namespace WordRush {
 

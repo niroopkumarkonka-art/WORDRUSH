@@ -4,12 +4,12 @@
 // Strict 1.5s pop-up duration limit constant
 // ============================================================================
 
-#include <iostream>
 #include <string>
 #include <vector>
-#include <map>
-#include <memory>
-#include <algorithm>
+
+#ifdef STANDALONE_GAME
+#include <iostream>
+#endif
 
 namespace WordRush {
 

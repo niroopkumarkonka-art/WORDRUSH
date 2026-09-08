@@ -4,13 +4,14 @@
 // Includes linguistic classification (Proper Name, Noun, Verb, Adjective)
 // ============================================================================
 
-#include <iostream>
 #include <string>
 #include <vector>
 #include <set>
-#include <map>
-#include <algorithm>
 #include <random>
+
+#ifdef STANDALONE_DICTIONARY
+#include <iostream>
+#endif
 
 namespace WordRush {
 
