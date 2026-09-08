@@ -42,6 +42,7 @@ import { GameEntranceModal } from "./components/GameEntranceModal";
 import { DictionaryHelperModal } from "./components/DictionaryHelperModal";
 import { AdminDashboard } from "./components/AdminDashboard";
 import { UserDashboard } from "./components/UserDashboard";
+import { AnagramSolver } from "./components/AnagramSolver";
 
 export default function App() {
   // --------------------------------------------------------------------------
@@ -93,6 +94,7 @@ export default function App() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isUserDashboardOpen, setIsUserDashboardOpen] = useState(false);
   const [isRulesOpen, setIsRulesOpen] = useState(false);
+  const [isAnagramModalOpen, setIsAnagramModalOpen] = useState(false);
   const [isMuted, setIsMuted] = useState(() => soundManager.isMuted());
 
   const handleToggleMute = () => {
@@ -715,6 +717,7 @@ export default function App() {
                 setIsPuzzleModeActive(true);
                 setCurrentView("PUZZLES");
               }}
+              onOpenAnagrams={() => setIsAnagramModalOpen(true)}
               onOpenRules={() => setIsRulesOpen(true)}
               onOpenUserStats={() => setIsUserDashboardOpen(true)}
               onOpenAdmin={() => setIsAdminOpen(true)}
@@ -1486,6 +1489,14 @@ export default function App() {
       {/* LAYER 6: RULES CODEX MODAL */}
       {/* -------------------------------------------------------------------- */}
       <RulesModal isOpen={isRulesOpen} onClose={() => setIsRulesOpen(false)} />
+
+      {/* -------------------------------------------------------------------- */}
+      {/* ANAGRAM SOLVER & CHALLENGE MODAL */}
+      {/* -------------------------------------------------------------------- */}
+      <AnagramSolver
+        isOpen={isAnagramModalOpen}
+        onClose={() => setIsAnagramModalOpen(false)}
+      />
 
       {/* Countdown Overlay */}
       {countdownSeconds !== null && <Countdown seconds={countdownSeconds} />}

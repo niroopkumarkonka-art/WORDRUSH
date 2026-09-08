@@ -15,6 +15,7 @@ export const LandingPage = ({
   onJoinRoom,
   onPlayBot,
   onOpenPuzzles,
+  onOpenAnagrams,
   onOpenRules,
   onOpenUserStats,
   onOpenAdmin,
@@ -55,6 +56,7 @@ export const LandingPage = ({
         onJoinRoom={onJoinRoom}
         onPlayBot={onPlayBot}
         onOpenPuzzles={onOpenPuzzles}
+        onOpenAnagrams={onOpenAnagrams}
         onOpenRules={onOpenRules}
         onOpenUserStats={onOpenUserStats}
         onlineCount={onlineCount}
@@ -75,6 +77,7 @@ export const LandingPage = ({
         onOpenArena={onOpenArena}
         onPlayBot={onPlayBot}
         onOpenPuzzles={onOpenPuzzles}
+        onOpenAnagrams={onOpenAnagrams}
         onOpenRules={onOpenRules}
       />
     </div>

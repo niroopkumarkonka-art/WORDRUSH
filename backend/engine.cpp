@@ -13,6 +13,7 @@
 #include <cctype>
 #include <random>
 #include <sstream>
+#include <fstream>
 
 namespace WordRush {
 
@@ -127,6 +128,25 @@ public:
         for (const auto& w : list4) { words.insert(w); words4.push_back(w); }
         for (const auto& w : list5) { words.insert(w); words5.push_back(w); }
         for (const auto& w : list6) { words.insert(w); words6.push_back(w); }
+
+        // Load extended lexicon from public/dictionary.txt if present
+        std::ifstream fin("public/dictionary.txt");
+        if (fin.is_open()) {
+            std::string line;
+            while (std::getline(fin, line)) {
+                std::string clean = "";
+                for (char c : line) {
+                    if (std::isalpha(static_cast<unsigned char>(c))) clean += std::toupper(c);
+                }
+                if (clean.length() >= 3 && clean.length() <= 8) {
+                    addWord(clean);
+                }
+            }
+        }
+    }
+
+    const std::set<std::string>& getAllWords() const {
+        return words;
     }
 
     bool contains(const std::string& word) const {
@@ -524,6 +544,75 @@ int main(int argc, char* argv[]) {
         bool isName = names.count(word) > 0;
         std::string category = isName ? "Proper Name" : (word.length() == 4 ? "Common Noun" : (word.length() == 6 ? "Tactical Noun" : "General"));
         std::cout << "{\"success\":true,\"word\":\"" << WordRush::escapeJson(word) << "\",\"isProperName\":" << (isName ? "true" : "false") << ",\"category\":\"" << category << "\"}\n";
+        return 0;
+    }
+
+    if (cmd == "anagram") {
+        std::string letters = argc > 2 ? WordRush::toUpper(argv[2]) : "";
+        std::map<char, int> targetFreq;
+        for (char c : letters) {
+            if (std::isalpha(static_cast<unsigned char>(c))) targetFreq[c]++;
+        }
+
+        std::vector<std::string> matches;
+        for (const auto& w : WordRush::globalDict.getAllWords()) {
+            if (w.length() < 3 || w.length() > letters.length()) continue;
+            std::map<char, int> wFreq;
+            bool possible = true;
+            for (char c : w) {
+                wFreq[c]++;
+                if (wFreq[c] > targetFreq[c]) {
+                    possible = false;
+                    break;
+                }
+            }
+            if (possible) {
+                matches.push_back(w);
+            }
+        }
+
+        // Sort by length descending, then alphabetical
+        std::sort(matches.begin(), matches.end(), [](const std::string& a, const std::string& b) {
+            if (a.length() != b.length()) return a.length() > b.length();
+            return a < b;
+        });
+
+        std::cout << "{\"success\":true,\"letters\":\"" << WordRush::escapeJson(letters) << "\",\"count\":" << matches.size() << ",\"anagrams\":[";
+        for (size_t i = 0; i < matches.size(); ++i) {
+            bool isExact = (matches[i].length() == letters.length());
+            int pts = isExact ? (static_cast<int>(matches[i].length()) * 25) : (static_cast<int>(matches[i].length()) * 15);
+            std::cout << "{\"word\":\"" << WordRush::escapeJson(matches[i]) << "\",\"length\":" << matches[i].length() << ",\"isExact\":" << (isExact ? "true" : "false") << ",\"points\":" << pts << "}"
+                      << (i + 1 < matches.size() ? "," : "");
+        }
+        std::cout << "]}\n";
+        return 0;
+    }
+
+    if (cmd == "puzzle") {
+        std::string diffStr = argc > 2 ? WordRush::toUpper(argv[2]) : "MEDIUM";
+        int len = 5;
+        if (diffStr == "EASY" || diffStr == "4") len = 4;
+        else if (diffStr == "HARD" || diffStr == "6") len = 6;
+
+        std::string secret = WordRush::globalDict.getRandomWord(len);
+        
+        // Create scrambled anagram letters
+        std::string scrambled = secret;
+        std::mt19937 rng(std::random_device{}());
+        std::shuffle(scrambled.begin(), scrambled.end(), rng);
+        if (scrambled == secret && scrambled.length() > 1) {
+            std::swap(scrambled[0], scrambled[1]);
+        }
+
+        std::cout << "{"
+                  << "\"success\":true,"
+                  << "\"word\":\"" << WordRush::escapeJson(secret) << "\","
+                  << "\"length\":" << len << ","
+                  << "\"difficulty\":\"" << diffStr << "\","
+                  << "\"scrambled\":\"" << WordRush::escapeJson(scrambled) << "\","
+                  << "\"basePoints\":" << (len * 25) << ","
+                  << "\"firstChar\":\"" << (secret.empty() ? 'A' : secret[0]) << "\""
+                  << "}\n";
         return 0;
     }
 

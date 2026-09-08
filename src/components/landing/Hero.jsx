@@ -10,6 +10,7 @@ import {
   BookOpen,
   Puzzle,
   Sparkles,
+  Zap,
 } from "lucide-react";
 
 const EASE = [0.22, 1, 0.36, 1];
@@ -48,6 +49,7 @@ export default function Hero({
   onJoinRoom,
   onPlayBot,
   onOpenPuzzles,
+  onOpenAnagrams,
   onOpenRules,
   onOpenUserStats,
   onlineCount = 28,
@@ -289,6 +291,17 @@ export default function Hero({
             >
               <Puzzle className="h-4 w-4 text-amber-300" />
               <span>WORD PUZZLES</span>
+            </button>
+
+            {/* Anagram Solver Mode */}
+            <button
+              type="button"
+              onClick={onOpenAnagrams}
+              className="flex items-center justify-center gap-2 rounded-2xl border-2 border-purple-400/60 bg-purple-500/20 hover:bg-purple-500/30 px-5 py-4 font-heading text-sm font-black text-purple-200 backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-lg"
+              title="Open Anagram Solver & Scramble Challenge"
+            >
+              <Zap className="h-4 w-4 text-purple-300 fill-purple-300" />
+              <span>ANAGRAM SOLVER</span>
             </button>
 
             {/* Solo AI Practice */}

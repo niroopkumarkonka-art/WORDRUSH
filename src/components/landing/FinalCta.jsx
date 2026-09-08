@@ -1,8 +1,8 @@
 import React from "react";
 import { motion } from "motion/react";
-import { Play, Swords, Shield, Heart, Puzzle } from "lucide-react";
+import { Play, Swords, Shield, Heart, Puzzle, Zap } from "lucide-react";
 
-export default function FinalCta({ onOpenArena, onPlayBot, onOpenPuzzles, onOpenRules }) {
+export default function FinalCta({ onOpenArena, onPlayBot, onOpenPuzzles, onOpenAnagrams, onOpenRules }) {
   return (
     <section
       data-testid="final-cta-section"
@@ -65,6 +65,15 @@ export default function FinalCta({ onOpenArena, onPlayBot, onOpenPuzzles, onOpen
           >
             <Puzzle className="h-5 w-5 text-amber-300" />
             <span>WORD PUZZLES</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onOpenAnagrams}
+            className="flex items-center justify-center gap-2 rounded-2xl border-2 border-purple-400/60 bg-purple-500/20 hover:bg-purple-500/30 px-6 py-4 font-heading text-base font-black text-purple-200 backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-lg"
+          >
+            <Zap className="h-5 w-5 text-purple-300 fill-purple-300" />
+            <span>ANAGRAM SOLVER</span>
           </button>
 
           <button

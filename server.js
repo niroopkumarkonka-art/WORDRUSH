@@ -106,6 +106,18 @@ export class CppBackendEngine {
     if (res && res.success) return res;
     return null;
   }
+
+  static solveAnagram(letters) {
+    const res = this.runCommand("anagram", [letters]);
+    if (res && res.success) return res;
+    return null;
+  }
+
+  static generatePuzzle(difficulty = "MEDIUM") {
+    const res = this.runCommand("puzzle", [difficulty]);
+    if (res && res.success) return res;
+    return null;
+  }
 }
 
 // ============================================================================
@@ -1226,6 +1238,47 @@ app.post("/api/hints/gemini", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Failed to generate hint" });
   }
+});
+
+app.get("/api/anagram/solve", (req, res) => {
+  const letters = (req.query.letters || "").toString().trim().toUpperCase();
+  if (!letters) {
+    return res.status(400).json({ error: "Letters parameter is required." });
+  }
+  const result = CppBackendEngine.solveAnagram(letters);
+  if (result) {
+    return res.json(result);
+  }
+  // Fallback solver
+  const anagrams = [];
+  const targetCounts = {};
+  for (const c of letters) targetCounts[c] = (targetCounts[c] || 0) + 1;
+  for (const word of serverDictionary.wordsList) {
+    if (word.length < 3 || word.length > letters.length) continue;
+    const wCounts = {};
+    let ok = true;
+    for (const c of word) {
+      wCounts[c] = (wCounts[c] || 0) + 1;
+      if (wCounts[c] > (targetCounts[c] || 0)) { ok = false; break; }
+    }
+    if (ok) {
+      const isExact = word.length === letters.length;
+      anagrams.push({ word, length: word.length, isExact, points: isExact ? word.length * 25 : word.length * 15 });
+    }
+  }
+  anagrams.sort((a, b) => b.length - a.length || a.word.localeCompare(b.word));
+  res.json({ success: true, letters, count: anagrams.length, anagrams });
+});
+
+app.get("/api/puzzles/generate", (req, res) => {
+  const difficulty = (req.query.difficulty || "MEDIUM").toString().toUpperCase();
+  const puzzle = CppBackendEngine.generatePuzzle(difficulty);
+  if (puzzle) {
+    return res.json(puzzle);
+  }
+  const len = difficulty === "EASY" ? 4 : difficulty === "HARD" ? 6 : 5;
+  const word = serverDictionary.getRandomWord(len);
+  res.json({ success: true, word, length: len, difficulty, basePoints: len * 25 });
 });
 
 app.get("/api/admin/metrics", (req, res) => {
