@@ -60,7 +60,7 @@ export default function FinalCta({ onOpenArena, onPlayBot, onOpenPuzzles, onOpen
 
           <button
             type="button"
-            onClick={onOpenPuzzles}
+            onClick={() => onOpenPuzzles && onOpenPuzzles("MEDIUM")}
             className="flex items-center justify-center gap-2 rounded-2xl border-2 border-amber-300/60 bg-amber-400/20 hover:bg-amber-400/30 px-6 py-4 font-heading text-base font-black text-amber-200 backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-lg"
           >
             <Puzzle className="h-5 w-5 text-amber-300" />

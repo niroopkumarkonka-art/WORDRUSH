@@ -311,7 +311,7 @@ export function createNewRound(roundNum, setterId, guesserId, wordLen) {
     boardStates,
     attemptsUsed: 0,
     hintsUsed: 0,
-    freeHintsRemaining: 3,
+    freeHintsRemaining: wordLen === 4 ? 3 : wordLen === 6 ? 1 : 2,
     extraHintsUsed: 0,
     completed: false,
     wordFound: false,

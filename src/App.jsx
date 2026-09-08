@@ -322,8 +322,8 @@ export default function App() {
   // Multiplayer Actions
   // --------------------------------------------------------------------------
   const handleCreateRoom = async (overrideWordLength, overrideTotalRounds) => {
-    const wLen = overrideWordLength || createRoomWordLength;
-    const tRounds = overrideTotalRounds || createRoomTotalRounds;
+    const wLen = Number(overrideWordLength) || createRoomWordLength || 5;
+    const tRounds = Number(overrideTotalRounds) || createRoomTotalRounds || 3;
     soundManager.playKeyClick();
     if (socketService.connected) {
       socketService.send("CREATE_ROOM", {
@@ -333,6 +333,7 @@ export default function App() {
         wordLength: wLen,
         totalRounds: tRounds,
       });
+      setCurrentView("MULTIPLAYER");
     } else {
       try {
         const res = await fetch("/api/rooms/create", {
@@ -356,22 +357,35 @@ export default function App() {
         }
       } catch (err) {
         soundManager.playError();
-        addToast("error", err.message || "Failed to create room");
+        const diff = wLen === 4 ? "EASY" : wLen === 6 ? "HARD" : "MEDIUM";
+        setPuzzleDifficulty(diff);
+        setIsPuzzleModeActive(true);
+        setCurrentView("PUZZLES");
+        addToast("info", `Multiplayer offline. Launched ${diff} (${wLen}-letter) Solo Game!`, "Offline Mode");
       }
     }
   };
 
   const handlePlayBot = (overrideWordLength, overrideTotalRounds) => {
-    const wLen = overrideWordLength || createRoomWordLength;
-    const tRounds = overrideTotalRounds || createRoomTotalRounds;
+    const wLen = Number(overrideWordLength) || createRoomWordLength || 5;
+    const tRounds = Number(overrideTotalRounds) || createRoomTotalRounds || 3;
     soundManager.playKeyClick();
-    socketService.send("CREATE_BOT_MATCH", {
-      playerId,
-      username,
-      avatar,
-      wordLength: wLen,
-      totalRounds: tRounds,
-    });
+    if (socketService.connected) {
+      socketService.send("CREATE_BOT_MATCH", {
+        playerId,
+        username,
+        avatar,
+        wordLength: wLen,
+        totalRounds: tRounds,
+      });
+      setCurrentView("MULTIPLAYER");
+    } else {
+      const diff = wLen === 4 ? "EASY" : wLen === 6 ? "HARD" : "MEDIUM";
+      setPuzzleDifficulty(diff);
+      setIsPuzzleModeActive(true);
+      setCurrentView("PUZZLES");
+      addToast("info", `Launched ${diff} (${wLen}-letter) Practice Game!`, "Practice Mode");
+    }
   };
 
   const handleJoinRoom = async (codeToJoin) => {
@@ -694,7 +708,10 @@ export default function App() {
               onJoinRoom={handleJoinRoom}
               onPlayBot={handlePlayBot}
               onOpenPuzzles={(diff) => {
-                setPuzzleDifficulty(diff || "MEDIUM");
+                const safe = typeof diff === "string" && ["EASY", "MEDIUM", "HARD"].includes(diff.toUpperCase())
+                  ? diff.toUpperCase()
+                  : "MEDIUM";
+                setPuzzleDifficulty(safe);
                 setIsPuzzleModeActive(true);
                 setCurrentView("PUZZLES");
               }}
@@ -1435,7 +1452,10 @@ export default function App() {
         isOpen={isEntranceModalOpen}
         onClose={() => setIsEntranceModalOpen(false)}
         onStartPuzzles={(diff) => {
-          setPuzzleDifficulty(diff);
+          const safe = typeof diff === "string" && ["EASY", "MEDIUM", "HARD"].includes(diff.toUpperCase())
+            ? diff.toUpperCase()
+            : "MEDIUM";
+          setPuzzleDifficulty(safe);
           setIsPuzzleModeActive(true);
           setCurrentView("PUZZLES");
         }}

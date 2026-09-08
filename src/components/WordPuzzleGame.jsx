@@ -31,7 +31,10 @@ export const WordPuzzleGame = ({
   onClose,
   initialDifficulty = "MEDIUM",
 }) => {
-  const [difficulty, setDifficulty] = useState(initialDifficulty);
+  const safeInitialDiff = typeof initialDifficulty === "string" && ["EASY", "MEDIUM", "HARD"].includes(initialDifficulty.toUpperCase())
+    ? initialDifficulty.toUpperCase()
+    : "MEDIUM";
+  const [difficulty, setDifficulty] = useState(safeInitialDiff);
   const [puzzleIndex, setPuzzleIndex] = useState(0);
   const [guesses, setGuesses] = useState([]);
   const [currentInput, setCurrentInput] = useState("");
@@ -50,6 +53,23 @@ export const WordPuzzleGame = ({
   });
   const [showDictHelper, setShowDictHelper] = useState(false);
   const [dictSearch, setDictSearch] = useState("");
+
+  // Sync state if initialDifficulty prop changes
+  useEffect(() => {
+    const valid = typeof initialDifficulty === "string" && ["EASY", "MEDIUM", "HARD"].includes(initialDifficulty.toUpperCase())
+      ? initialDifficulty.toUpperCase()
+      : "MEDIUM";
+    setDifficulty(valid);
+    setPuzzleIndex(0);
+    setGuesses([]);
+    setCurrentInput("");
+    setIsGameOver(false);
+    setHasWon(false);
+    setShowHint(false);
+    setHintsRevealed(0);
+    setIsShake(false);
+    setStars(0);
+  }, [initialDifficulty]);
 
   const activeLevelConfig = DIFFICULTY_LEVELS[difficulty] || DIFFICULTY_LEVELS.MEDIUM;
   const wordLength = activeLevelConfig.wordLength;

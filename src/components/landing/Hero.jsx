@@ -228,18 +228,33 @@ export default function Hero({
             <span className="font-heading font-black tracking-wider uppercase text-amber-300 text-[11px]">
               Game Levels:
             </span>
-            <span className="px-2.5 py-1 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/40 font-bold text-[11px] flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => onOpenPuzzles && onOpenPuzzles("EASY")}
+              className="px-2.5 py-1 rounded-full bg-emerald-500/30 hover:bg-emerald-500/50 text-emerald-200 border border-emerald-400/40 font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-all hover:scale-105 active:scale-95"
+              title="Play Easy 4-letter word puzzles"
+            >
               <span className="w-2 h-2 rounded-full bg-emerald-400" />
               <span>Easy (4 Letters • 3 Hints)</span>
-            </span>
-            <span className="px-2.5 py-1 rounded-full bg-amber-500/30 text-amber-200 border border-amber-400/40 font-bold text-[11px] flex items-center gap-1">
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenPuzzles && onOpenPuzzles("MEDIUM")}
+              className="px-2.5 py-1 rounded-full bg-amber-500/30 hover:bg-amber-500/50 text-amber-200 border border-amber-400/40 font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-all hover:scale-105 active:scale-95"
+              title="Play Medium 5-letter word puzzles"
+            >
               <span className="w-2 h-2 rounded-full bg-amber-400" />
               <span>Medium (5 Letters • 2 Hints)</span>
-            </span>
-            <span className="px-2.5 py-1 rounded-full bg-rose-500/30 text-rose-200 border border-rose-400/40 font-bold text-[11px] flex items-center gap-1">
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenPuzzles && onOpenPuzzles("HARD")}
+              className="px-2.5 py-1 rounded-full bg-rose-500/30 hover:bg-rose-500/50 text-rose-200 border border-rose-400/40 font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-all hover:scale-105 active:scale-95"
+              title="Play Hard 6-letter word puzzles"
+            >
               <span className="w-2 h-2 rounded-full bg-rose-400" />
               <span>Hard (6 Letters • 1 Hint)</span>
-            </span>
+            </button>
           </div>
 
           <div className="flex items-center gap-1.5 text-cyan-200 font-semibold text-[11px]">
@@ -269,7 +284,7 @@ export default function Hero({
             {/* Solo Word Puzzles Mode */}
             <button
               type="button"
-              onClick={onOpenPuzzles}
+              onClick={() => onOpenPuzzles && onOpenPuzzles("MEDIUM")}
               className="flex items-center justify-center gap-2 rounded-2xl border-2 border-amber-300/60 bg-amber-400/20 hover:bg-amber-400/30 px-5 py-4 font-heading text-sm font-black text-amber-200 backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-lg"
             >
               <Puzzle className="h-4 w-4 text-amber-300" />

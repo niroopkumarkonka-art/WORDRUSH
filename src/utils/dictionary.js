@@ -188,7 +188,8 @@ export const DICTIONARY_ENTRIES = {
  * Get curated puzzle list for a given difficulty
  */
 export function getPuzzlesByDifficulty(difficulty = "MEDIUM") {
-  const diffKey = difficulty.toUpperCase();
+  const safeDiff = typeof difficulty === "string" ? difficulty.toUpperCase() : "MEDIUM";
+  const diffKey = safeDiff === "EASY" || safeDiff === "HARD" ? safeDiff : "MEDIUM";
   const entries = Object.values(DICTIONARY_ENTRIES).filter(
     (e) => e.difficulty === diffKey
   );

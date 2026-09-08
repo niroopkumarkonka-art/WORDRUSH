@@ -9,3 +9,4 @@ Thumbs.db
 !.env.example
 .vscode/
 .idea/
+*.vsix
