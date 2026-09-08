@@ -160,19 +160,6 @@ export const GameEntranceModal = ({
 
           <button
             type="button"
-            onClick={() => setSelectedTab("bot")}
-            className={`flex-1 py-2 px-2 sm:px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-              selectedTab === "bot"
-                ? "bg-purple-600 text-white shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <Bot className="w-3.5 h-3.5" />
-            <span>AI Practice</span>
-          </button>
-
-          <button
-            type="button"
             onClick={() => setSelectedTab("multiplayer")}
             className={`flex-1 py-2 px-2 sm:px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               selectedTab === "multiplayer"
@@ -218,48 +205,6 @@ export const GameEntranceModal = ({
             >
               <Play className="w-4 h-4 fill-current" />
               <span>START {selectedDifficulty} WORD PUZZLES</span>
-            </button>
-          </div>
-        )}
-
-        {/* TAB 2: SOLO BOT DUEL */}
-        {selectedTab === "bot" && (
-          <div className="p-4 sm:p-5 rounded-2xl bg-purple-50/60 border-2 border-purple-200 flex flex-col gap-3">
-            <div className="flex items-center gap-2 text-purple-950 font-black text-sm">
-              <Bot className="w-4 h-4 text-purple-600" />
-              <span>SOLO AI CIPHER DUEL (ZERO WAIT TIME)</span>
-            </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Face our adaptive Lexical CyberBot in a rapid 1v1 battle. CyberBot selects tricky
-              words, deciphers your secret cipher, and plays instantly.
-            </p>
-
-            <div className="flex items-center justify-between text-xs font-bold text-purple-900 bg-white p-2.5 rounded-xl border border-purple-200">
-              <span>Match Length:</span>
-              <div className="flex gap-2">
-                {[3, 5].map((rounds) => (
-                  <button
-                    key={rounds}
-                    type="button"
-                    onClick={() => setTotalRounds(rounds)}
-                    className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer border ${
-                      totalRounds === rounds
-                        ? "bg-purple-600 text-white border-purple-700 shadow-xs"
-                        : "bg-purple-50 text-purple-900 border-purple-200"
-                    }`}
-                  >
-                    {rounds} Rounds
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={handleStartBotDuel}
-              className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black text-sm uppercase tracking-wider transition-all shadow-md cursor-pointer hover:scale-102 active:scale-98 flex items-center justify-center gap-2"
-            >
-              <Zap className="w-4 h-4" />
-              <span>START {selectedDifficulty} BOT DUEL</span>
             </button>
           </div>
         )}

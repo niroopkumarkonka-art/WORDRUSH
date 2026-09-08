@@ -1167,17 +1167,6 @@ export default function App() {
                 <DoorOpen className="w-3.5 h-3.5" />
                 <span>Join Code</span>
               </button>
-              <button
-                type="button"
-                onClick={() => setMatchmakerTab("bot")}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${matchmakerTab === "bot"
-                    ? "bg-purple-500 text-white shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                  }`}
-              >
-                <Zap className="w-3.5 h-3.5" />
-                <span>AI Practice</span>
-              </button>
             </div>
 
             {/* TAB 1: HOST ARENA */}
@@ -1271,29 +1260,6 @@ export default function App() {
                     JOIN ROOM
                   </button>
                 </div>
-              </div>
-            )}
-
-            {/* TAB 3: SOLO BOT ARENA */}
-            {matchmakerTab === "bot" && (
-              <div className="p-5 rounded-2xl bg-purple-50/70 border-2 border-purple-200 flex flex-col gap-4">
-                <div className="flex items-center gap-2 text-purple-950 font-black text-sm">
-                  <Zap className="w-4 h-4 text-purple-600" />
-                  <span>SOLO AI CIPHER DUEL</span>
-                </div>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Face our adaptive Lexical Bot! The Bot will choose tricky words, guess your secrets, and provide instant training with zero wait time.
-                </p>
-                <button
-                  id="modal-bot-match-btn"
-                  onClick={() => {
-                    handlePlayBot();
-                    setIsMatchmakerOpen(false);
-                  }}
-                  className="w-full py-4 px-4 rounded-2xl bg-gradient-to-b from-purple-500 to-indigo-600 text-white font-black text-sm uppercase tracking-wider transition-all shadow-md cursor-pointer hover:scale-102 active:scale-98"
-                >
-                  START BOT DUEL NOW
-                </button>
               </div>
             )}
           </div>

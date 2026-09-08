@@ -304,15 +304,6 @@ export default function Hero({
               <span>ANAGRAM SOLVER</span>
             </button>
 
-            {/* Solo AI Practice */}
-            <button
-              type="button"
-              onClick={onPlayBot}
-              className="flex items-center justify-center gap-2 rounded-2xl border-2 border-white/30 bg-white/15 hover:bg-white/25 px-5 py-4 font-heading text-sm font-black text-white backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-lg"
-            >
-              <Bot className="h-4 w-4 text-purple-300" />
-              <span>AI DUEL</span>
-            </button>
 
             {/* Primary Action Button (Enter Arena) */}
             <button

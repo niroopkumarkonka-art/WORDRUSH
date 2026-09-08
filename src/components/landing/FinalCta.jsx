@@ -76,14 +76,6 @@ export default function FinalCta({ onOpenArena, onPlayBot, onOpenPuzzles, onOpen
             <span>ANAGRAM SOLVER</span>
           </button>
 
-          <button
-            type="button"
-            onClick={onPlayBot}
-            className="flex items-center justify-center gap-2 rounded-2xl border-2 border-white/30 bg-white/10 hover:bg-white/20 px-6 py-4 font-heading text-base font-black text-[var(--wr-cream)] backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-lg"
-          >
-            <Swords className="h-5 w-5 text-amber-300" />
-            <span>SOLO AI DUEL</span>
-          </button>
         </div>
 
         {/* ------------------------------------------------------------------ */}
