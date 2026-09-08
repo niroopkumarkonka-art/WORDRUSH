@@ -5,26 +5,45 @@ export const RoomCode = ({ roomCode = "" }) => {
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  const handleCopyCode = async () => {
+  const copyTextSafely = async (text) => {
     try {
-      await navigator.clipboard.writeText(roomCode);
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch {}
+    try {
+      const el = document.createElement("textarea");
+      el.value = text;
+      el.setAttribute("readonly", "");
+      el.style.position = "fixed";
+      el.style.left = "-9999px";
+      document.body.appendChild(el);
+      el.select();
+      const successful = document.execCommand("copy");
+      document.body.removeChild(el);
+      return successful;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleCopyCode = async () => {
+    const ok = await copyTextSafely(roomCode);
+    if (ok) {
       setCopiedCode(true);
-      setTimeout(() => setCopiedCode(false), 1500); // 1.5 sec only
-    } catch (err) {
-      console.error("Failed to copy code:", err);
+      setTimeout(() => setCopiedCode(false), 1500);
     }
   };
 
   const handleCopyLink = async () => {
-    try {
-      const origin = window.location.origin;
-      const pathname = window.location.pathname;
-      const inviteUrl = `${origin}${pathname}?room=${roomCode}`;
-      await navigator.clipboard.writeText(inviteUrl);
+    const origin = window.location.origin;
+    const pathname = window.location.pathname;
+    const inviteUrl = `${origin}${pathname}?room=${roomCode}`;
+    const ok = await copyTextSafely(inviteUrl);
+    if (ok) {
       setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 1500); // 1.5 sec only
-    } catch (err) {
-      console.error("Failed to copy link:", err);
+      setTimeout(() => setCopiedLink(false), 1500);
     }
   };
 
