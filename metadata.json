@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix WORDRUSH ARENA",
+  "description": "Think Fast. Choose Smart. Beat Your Opponent. Fast-paced real-time multiplayer word guessing arena with power-ups, hints, and live reactions!",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
