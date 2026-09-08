@@ -1,45 +1,38 @@
 # WORDRUSH ARENA
 ### “Think Fast. Choose Smart. Beat Your Opponent.”
 
-A real-time, **two-player multiplayer-only** word guessing competition designed as a flagship **B.Tech Data Structures & Algorithms in C++ Project**, unifying Modules I through X of the academic syllabus into a modern, production-ready web application.
+A real-time, high-performance competitive word gaming application powered by a native C++ computational backend and a modern full-stack web interface. Features head-to-head 1v1 multiplayer duels, solo word puzzle adventures across multiple difficulties, real-time anagram unscramblers, automated puzzle solvers, and a persistent lexical vault.
 
 ---
 
-## 1. Problem Statement
-Traditional word guessing games (such as Wordle) are almost exclusively single-player experiences where users interact with pre-programmed daily words or automated bots. Moreover, computer science academic projects in Data Structures using C++ are frequently restricted to sterile console text interfaces that fail to demonstrate how core algorithms, Abstract Data Types (Stacks, Queues, 2D Arrays, Hash Sets), and asymptotic performance principles power real-world, high-concurrency multiplayer applications.
+## 1. Overview & Key Features
 
-**WordRush Arena** addresses both challenges:
-1. **Multiplayer-Only Dynamic**: Eliminates solo play and bots entirely; matches two real human players where one secretly sets a valid, non-duplicate word and the other attempts to deduce it within 6 attempts using Wordle-style feedback and strategic hints.
-2. **Pedagogical Integration**: Directly implements every module of the B.Tech Data Structures in C++ syllabus (Modules I – X) in native C++ (`backend/`) and mirrors the exact state, array matrix representations, and ADTs on the full-stack real-time multiplayer engine.
+**WordRush Arena** combines tactical wordplay with low-latency multiplayer mechanics and robust computational algorithms:
 
----
+1. **Competitive 1v1 Multiplayer Arena**:
+   - Matches two players in turn-based lexical combat using 5-letter room codes.
+   - One player secretly sets a valid, non-duplicate word while the other attempts to deduce it within 6 attempts using Wordle-style colored feedback and strategic hints.
+   - Alternating rounds with real-time score calculation, defending bonuses, and victory confetti.
 
-## 2. Objectives
-* Build a competitive, real-time two-player word guessing arena with zero bot/solo modes.
-* Demonstrate genuine implementations of:
-  * **Module I**: Variables, Data Types, Operators, Functions, Program Structure.
-  * **Module II**: Decision-Making (`if/else`, nested conditions) & Loops (`for`, `while`).
-  * **Module III**: 1D Arrays (keyboard mapping, letter state vectors, reusable array functions).
-  * **Module IV**: 2D Arrays (game board matrix $[6 \times 6]$, row/column indexing, board traversal).
-  * **Module V**: Strings (traversal, two-pointer reversal, character frequency mapping, two-pass pattern matching).
-  * **Module VI**: Structures (`struct Player`, nested `struct Profile`, array of structures `Player players[2]`).
-  * **Module VII**: Algorithmic & Data Structure Performance Analysis (Time/Space complexity, Asymptotic notation).
-  * **Module VIII**: Stack ADT (Custom array-based `HintStack` with LIFO hint popping).
-  * **Module IX**: Queue ADT (Custom array-based `PlayerQueue` FIFO matchmaking & `CircularQueue` ring buffer).
-  * **Module X**: STL Fundamentals (`vector`, `pair`, `iterators`, `deque`, `set`, `map`).
-* Provide an in-game **Interactive Data Structure & Complexity Inspector** allowing students, evaluators, and faculty to inspect live memory structures and asymptotic bounds during gameplay.
+2. **Word Puzzles Adventure**:
+   - Curated single-player word ciphers spanning **Easy (4 letters)**, **Medium (5 letters)**, and **Hard (6 letters)** difficulties.
+   - Dynamic context clues, definitions, and distinct **Electric Cyan** first-letter match indicators.
+   - Random puzzle generator and step-by-step solver capabilities.
 
----
+3. **Anagram Solver & Lexical Inspector**:
+   - Interactive modal capable of finding all valid permutations and anagrams for any letter set.
+   - Live vocabulary inspector validating words in real time.
 
-## 3. Technologies
-* **C++ Backend Engine**: C++17, CMake, Native STL, Modular OOP and ADT classes.
-* **Full-Stack Runtime**: Node.js, Express, TypeScript, tsx.
-* **Real-Time Multiplayer Protocol**: WebSockets (`ws`), JSON-RPC event bus, auto-reconnection.
-* **Frontend UI**: React 19, Vite, Tailwind CSS, Lucide Icons, Canvas-Confetti, Motion.
+4. **Saved Words Vault**:
+   - Automatically saves every deciphered word, definition, category, points earned, and timestamp into a searchable, filterable local vault.
+
+5. **Native C++ Performance Backend**:
+   - High-throughput computational engine executing word validations, guess evaluations, hints, and anagram computations via low-overhead system execution.
 
 ---
 
-## 4. System Architecture
+## 2. Core Architecture & System Design
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    WORDRUSH ARENA CLIENTS                       │
@@ -52,210 +45,173 @@ Traditional word guessing games (such as Wordle) are almost exclusively single-p
                 ▼                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                 EXPRESS & WEBSOCKET SERVER                      │
-│   • Port 3000 (0.0.0.0) Ingress Routing                         │
+│   • Port 3000 Ingress Routing & REST API Endpoints              │
 │   • Room Code Manager (std::map<string, Room>)                  │
-│   • Username Registry (std::unordered_map)                      │
-│   • Player Waiting Queue (Custom Array-Based Queue FIFO)        │
-│   • Event Ring Buffer (Custom Circular Queue)                   │
+│   • Username Registry & Connection Tracking                     │
+│   • Event Ring Buffer & State Broadcast                         │
 ├─────────────────────────────────────────────────────────────────┤
-│                     CORE GAME ENGINE                            │
+│                     CORE GAME LOGIC                             │
 │   • 2D Board Matrix: char gameBoard[6][6]                       │
 │   • 1D Letter States: int states[6] (0=Gray, 1=Yellow, 2=Green) │
-│   • Hint Manager: Custom Array-Based Stack ADT (LIFO)           │
+│   • Hint Manager: Array-Based Stack ADT (LIFO)                  │
 │   • Duplicate Detector: std::set<char>                          │
-│   • Wordle Two-Pass Pattern Matcher: O(N)                       │
-│   • Dictionary: 1000+ words fast O(1) hash table lookup         │
+│   • Two-Pass Guess Deduction Algorithm: O(N)                    │
+│   • Dictionary: 1,200+ words fast O(1) hash table lookup        │
 ├─────────────────────────────────────────────────────────────────┤
-│            AUTHENTIC C++ BACKEND (`backend/`)                   │
-│   • include/*.h & src/*.cpp                                     │
-│   • CMakeLists.txt & Native Compilation Suite                   │
-│   • Complete Syllabus Verification Suite in main.cpp            │
+│            AUTHENTIC C++ ENGINE (`backend/`)                    │
+│   • engine.cpp, validator.cpp, matchmaker.cpp, hints.cpp        │
+│   • Compiled Native Binary (wordrush_engine.exe)                │
+│   • Sub-millisecond Execution & JSON Output                     │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 5. STL Used in WordRush Arena
+## 3. Technology Stack
 
-| STL Container / Feature | Application in WordRush Arena | Why Selected? |
-| :--- | :--- | :--- |
-| **`std::vector`** | Round history, dictionary word storage, match logs | Dynamic resizing, contiguous cache locality, random access $O(1)$. |
-| **`std::pair`** | Player-score tuple `std::pair<string, int>` | Clean pairing of player identifier with cumulative score without redundant wrapper classes. |
-| **Iterators** | Iterating through dictionary words & round history | Standardized container-agnostic traversal demonstrating Module X STL iterator syntax. |
-| **`std::deque`** | Recent match event announcements | Fast $O(1)$ push at back and $O(1)$ pop at front when bounded log exceeds capacity. |
-| **`std::set`** | Duplicate letter detection in secret words | Guaranteed uniqueness; prevents words like `APPLE` or `LEVEL` with $O(N \log N)$ set operations. |
-| **`std::map`** | Room management (`roomCode -> Room`), char frequency | Ordered associative Red-Black tree lookup guaranteeing $O(\log R)$ retrieval. |
-| **`std::stack`** | Supporting guess history backtracking | Demonstrates STL stack alongside the custom array-based `HintStack`. |
-| **`std::queue`** | Supporting event dispatch | Demonstrates STL queue alongside the custom array-based `PlayerQueue`. |
+* **Frontend**: React 19, Vite, Tailwind CSS, Lucide Icons, Canvas-Confetti, Motion.
+* **Backend Runtime**: Node.js, Express, WebSockets (`ws`).
+* **High-Performance Logic Engine**: C++17 native binary, Standard Template Library (STL), custom Abstract Data Types.
+* **Storage**: Local persistent storage for player profiles, streaks, and the Saved Words Vault.
 
 ---
 
-## 6. Data Structure & Algorithm Analysis (Module VII)
+## 4. Algorithms & Data Structures
 
 ### 1. Duplicate Letter Detection (`hasDuplicateLetters`)
-* **Algorithm**: Insert each character into `std::set<char>`. If character exists, reject.
-* **Time Complexity**:
-  * *Best Case*: $O(1)$ (Duplicate detected in first 2 characters, e.g. `AARDVARK`).
-  * *Average Case*: $O(N \log K)$ where $N$ is word length (4–6) and $K \le 26$ unique letters.
-  * *Worst Case*: $O(N \log N)$ (All characters distinct).
-* **Space Complexity**: $O(N)$ auxiliary memory for the set.
+* **Method**: Character iteration utilizing an associative set (`std::set<char>`).
+* **Complexity**:
+  * *Time*: $O(N \log N)$ worst-case, $O(1)$ best-case for early duplicates.
+  * *Space*: $O(N)$ auxiliary memory for unique characters.
 
-### 2. Wordle Two-Pass Guess Matching (`compareGuess`)
-* **Algorithm**:
-  1. Pass 1: Identifies exact matches at the same index, sets state to `GREEN` (2), and decrements the target character frequency map.
-  2. Pass 2: For non-green indices, checks if character exists with frequency $> 0$. If yes, assigns `YELLOW` (1) and decrements frequency; otherwise assigns `GRAY` (0).
-* **Time Complexity**:
-  * *Best Case*: $O(N)$ (Exact match on all characters).
-  * *Average Case*: $O(N)$ (Two linear passes over length $N \in \{4, 5, 6\}$).
-  * *Worst Case*: $O(N)$.
-* **Space Complexity**: $O(N)$ for letter frequency tracking map and 1D state array.
+### 2. Two-Pass Wordle Guess Evaluation (`evaluateGuess`)
+* **Method**:
+  1. *Pass 1*: Identifies exact character and index matches (`GREEN`), marking them and adjusting the target character frequency map.
+  2. *Pass 2*: For non-green positions, verifies whether the character exists in the remaining frequency map (`YELLOW`) or is absent (`GRAY`).
+* **Complexity**:
+  * *Time*: $O(N)$ linear time where $N \in \{4, 5, 6\}$.
+  * *Space*: $O(N)$ for character frequency tracking and 1D state vectors.
 
-### 3. 2D Game Board Matrix Traversal (`gameBoard[6][6]`)
-* **Algorithm**: Row and column direct indexing `gameBoard[row][col]`.
-* **Time Complexity**: $O(\text{Rows} \times \text{Cols}) = O(6 \times 6) = O(1)$ bounded constant time.
-* **Space Complexity**: $O(1)$ contiguous memory buffer.
+### 3. 2D Game Board Matrix (`gameBoard[6][6]`)
+* **Method**: Direct coordinate indexing `gameBoard[row][col]`.
+* **Complexity**: $O(1)$ bounded constant time and $O(1)$ contiguous memory.
 
-### 4. Stack ADT Operations (`HintStack`)
-* **Algorithm**: Top pointer arithmetic `hints[++topIndex]` and `hints[topIndex--]`.
-* **Time Complexity**: Push: $O(1)$, Pop: $O(1)$, Peek: $O(1)$.
-* **Space Complexity**: $O(M)$ where $M$ is `MAX_STACK_SIZE = 20`.
+### 4. Custom Stack Implementation (`HintStack`)
+* **Method**: Array-based Last-In, First-Out (LIFO) pointer arithmetic.
+* **Complexity**: Push $O(1)$, Pop $O(1)$, Peek $O(1)$.
 
-### 5. Queue ADT Operations (`PlayerQueue`)
-* **Algorithm**: Array index tracking with front and rear pointer increments.
-* **Time Complexity**: Enqueue: $O(1)$, Dequeue: $O(1)$, Front: $O(1)$.
-* **Space Complexity**: $O(C)$ where $C$ is `MAX_QUEUE_CAPACITY = 30`.
+### 5. Custom Queue Implementation (`PlayerQueue` & `CircularQueue`)
+* **Method**: Array-based First-In, First-Out (FIFO) with front/rear ring buffer indices.
+* **Complexity**: Enqueue $O(1)$, Dequeue $O(1)$, Front $O(1)$.
+
+### 6. STL Containers Utilized
+
+| Container / Feature | Application in WordRush Arena | Performance Characteristics |
+| :--- | :--- | :--- |
+| **`std::vector`** | Dictionary lexicon, round history, past guess vectors | Contiguous cache locality, $O(1)$ random access. |
+| **`std::set`** | Duplicate letter validation in secret words | Unique element enforcement, $O(N \log N)$ verification. |
+| **`std::map`** | Room code lookup, character frequency calculation | Ordered logarithmic search $O(\log N)$. |
+| **`std::deque`** | Bounded match event notifications | Fast $O(1)$ push at back and $O(1)$ pop at front. |
+| **`std::pair`** | Player-score tuples | Lightweight key-value pairing without overhead. |
 
 ---
 
-## 7. Game Rules & Scoring
+## 5. Rules of the Arena
 
-### Secret Word Constraints
-1. Must exist in the official dictionary.
-2. Must match the agreed-upon word length (4, 5, or 6 letters).
-3. Must contain **NO DUPLICATE LETTERS** (e.g. `CRANE` is valid, `APPLE` is invalid).
+### Secret Word Criteria
+1. Must exist in the recognized dictionary lexicon.
+2. Must match the designated match length (4, 5, or 6 letters).
+3. Must contain **no repeated letters** (e.g. `CRANE` is valid, `APPLE` is invalid).
 
-### Guessing Constraints
+### Guessing Criteria
 1. Guesses must be valid dictionary words of matching length.
-2. Guesses **may** contain repeated letters (e.g. `SPEED` guessing `CRANE` correctly evaluates each `E`).
-3. Guesser has exactly 6 attempts.
+2. Guesses may contain repeated letters.
+3. The guesser has up to 6 attempts to deduce the secret word.
 
-### Scoring Breakdown
-* **Word Successfully Found**: $+10$ base points.
+### Scoring Dynamics
+* **Word Deciphered**: $+10$ base points.
 * **Speed / Attempts Bonus**: $+(\text{Max Attempts} - \text{Attempts Used} + 1) \times 2$ points.
 * **Unused Hints Bonus**: $+1$ point per unused free hint.
-* **Extra Hint Penalty**: $-1$ point per extra hint taken after 3 free hints are consumed.
-* **Word Setter Defending Bonus**: If guesser exhausts all 6 attempts without finding the word, the setter defends and earns $+10$ points.
-
-### Alternating Rounds
-* 3 or 5 rounds.
-* Round 1: Player 1 sets $\rightarrow$ Player 2 guesses.
-* Round 2: Player 2 sets $\rightarrow$ Player 1 guesses.
-* Round 3: Player 1 sets $\rightarrow$ Player 2 guesses.
-* (And so forth for Round 4 and 5).
+* **Extra Hint Penalty**: $-1$ point per additional hint consumed beyond free allocation.
+* **Setter Defending Bonus**: If the guesser fails to solve within 6 tries, the word setter earns $+10$ points.
 
 ---
 
-## 8. Directory & Folder Structure
+## 6. Project Structure
+
 ```
-wordrush-arena/
-├── backend/                        # Complete C++ B.Tech Syllabus Project
-│   ├── CMakeLists.txt              # CMake build configuration
-│   ├── data/
-│   │   └── dictionary.txt          # English word bank (4, 5, 6 letters)
-│   ├── include/                    # C++ Header Files
-│   │   ├── CircularQueue.h
-│   │   ├── Game.h
-│   │   ├── GameStateManager.h
-│   │   ├── GuessValidator.h
-│   │   ├── HintManager.h
-│   │   ├── Player.h
-│   │   ├── Queue.h
-│   │   ├── Room.h
-│   │   ├── RoomManager.h
-│   │   ├── Round.h
-│   │   ├── ScoreManager.h
-│   │   ├── Stack.h
-│   │   ├── WordDictionary.h
-│   │   └── WordValidator.h
-│   └── src/                        # C++ Implementation Files
-│       ├── CircularQueue.cpp
-│       ├── Game.cpp
-│       ├── GameStateManager.cpp
-│       ├── GuessValidator.cpp
-│       ├── HintManager.cpp
-│       ├── main.cpp                # Comprehensive verification & test suite
-│       ├── Player.cpp
-│       ├── Queue.cpp
-│       ├── Room.cpp
-│       ├── RoomManager.cpp
-│       ├── Round.cpp
-│       ├── ScoreManager.cpp
-│       ├── Stack.cpp
-│       ├── WordDictionary.cpp
-│       └── WordValidator.cpp
-├── server/                         # Server-side mirror of C++ Data Structures
-│   ├── dictionary.ts
-│   └── engine.ts
+WORDRUSH/
+├── backend/                        # C++ High-Performance Logic Engine
+│   ├── engine.cpp                  # CLI dispatch interface (JSON-RPC)
+│   ├── validator.cpp               # Word validation & two-pass evaluator
+│   ├── matchmaker.cpp              # Room code generation & player queues
+│   ├── dictionary.cpp             # Lexicon loader & fast lookup
+│   ├── hints.cpp                   # Context clue generator & solver
+│   └── wordrush_engine.exe         # Compiled native binary
+├── public/                         # Static assets & dictionary wordlists
+│   └── dictionary.txt              # Standard English word bank
 ├── src/                            # React 19 Client Application
-│   ├── components/                 # Modular, Accessible UI Components
-│   │   ├── Countdown.tsx
-│   │   ├── DataStructuresInspectorModal.tsx # Live Academic C++ Inspector
-│   │   ├── GameBoard.tsx
-│   │   ├── HintPanel.tsx
-│   │   ├── Keyboard.tsx
-│   │   ├── LetterTile.tsx
-│   │   ├── Lobby.tsx
-│   │   ├── Logo.tsx
-│   │   ├── Modal.tsx
-│   │   ├── PlayerCard.tsx
-│   │   ├── RoomCode.tsx
-│   │   ├── RoundIndicator.tsx
-│   │   ├── RulesModal.tsx
-│   │   ├── Scoreboard.tsx
-│   │   ├── StatsCard.tsx
-│   │   ├── Toast.tsx
-│   │   └── WinnerModal.tsx
+│   ├── components/                 # UI components
+│   │   ├── AnagramSolver.jsx       # Unscramble modal
+│   │   ├── GameBoard.jsx           # Grid display
+│   │   ├── GameEntranceModal.jsx   # Mode & difficulty selection
+│   │   ├── Keyboard.jsx            # Unified virtual & physical keyboard
+│   │   ├── LetterTile.jsx          # 3D Candy letter tiles
+│   │   ├── Lobby.jsx               # Match waiting lobby
+│   │   ├── UserDashboard.jsx       # Career stats & avatar selection
+│   │   └── WordPuzzleGame.jsx      # Word puzzle adventure & saved vault
 │   ├── services/
-│   │   └── socket.ts               # Resilient WebSocket Client
-│   ├── App.tsx                     # Main State Coordinator & Page Router
-│   ├── index.css                   # Global Tailwind Styles
-│   ├── main.tsx                    # React Entry
-│   └── types.ts                    # Shared TypeScript Interfaces
-├── DATA_STRUCTURE_USAGE.md         # Detailed Course Syllabus Mapping
-├── package.json
-├── server.ts                       # Express + WebSocket Server Entry
-└── README.md
+│   │   ├── socket.js               # WebSocket client & reconnect engine
+│   │   └── audio.js                # Sound service
+│   ├── utils/
+│   │   ├── dictionary.js           # Multi-level word bank & definitions
+│   │   └── wordClassifier.js       # Lexical type inspector
+│   ├── App.jsx                     # Root application coordinator
+│   ├── main.jsx                    # Application bootstrap
+│   └── index.css                   # Theme styles & design system
+├── server.js                       # Express & WebSocket server application
+├── package.json                    # Project dependencies & build scripts
+├── vite.config.js                  # Vite configuration & dev proxy
+└── README.md                       # Project documentation
 ```
 
 ---
 
-## 9. Setup & Running Instructions
+## 7. Setup & Running Instructions
 
-### Running the Web Application
+### Prerequisites
+* **Node.js** (v18 or higher recommended)
+* **g++ / MinGW-w64** (for compiling the C++ engine)
+
+### 1. Install Dependencies
 ```bash
-# 1. Install dependencies
 npm install
+```
 
-# 2. Run the full-stack multiplayer server
+### 2. Build or Recompile the C++ Engine (Optional)
+The pre-compiled binary is provided at `backend/wordrush_engine.exe`. To recompile:
+```bash
+g++ -O3 -std=c++17 backend/engine.cpp -o backend/wordrush_engine.exe
+```
+
+### 3. Run the Application
+```bash
+# Start the full-stack server (serves frontend & backend on port 3000)
 npm run dev
+```
 
-# 3. Open browser
+Open your browser and navigate to:
+```
 http://localhost:3000
 ```
 
-### Compiling the C++ Backend Project
+### 4. Production Build
 ```bash
-cd backend
-mkdir -p build && cd build
-cmake ..
-make
-./wordrush_arena
+npm run build
+npm run start
 ```
-This runs the full test harness verifying Modules I through X, printing array outputs, stack LIFO pops, queue FIFO dequeues, and asymptotic complexity reports!
 
 ---
 
-## 10. Author & Academic Context
-* **Project**: WordRush Arena — B.Tech Data Structures in C++ Capstone Project.
-* **Student/Author**: Rakshitha Konka
-* **Course Coverage**: Modules I through X (Variables, Control Statements, 1D Arrays, 2D Arrays, Strings, Structures, Performance Analysis, Stacks, Queues, STL Containers).
+## 8. License & Attribution
+WordRush Arena is released under the MIT License. Developed with a focus on real-time multiplayer networking, low-level algorithmic efficiency, and modern web UI craftsmanship.
