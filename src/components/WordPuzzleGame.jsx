@@ -86,27 +86,29 @@ export const WordPuzzleGame = ({
   const [dictSearch, setDictSearch] = useState("");
   const [isAnagramModalOpen, setIsAnagramModalOpen] = useState(false);
 
-  // Procedural dynamic puzzle list
-  const [customPuzzles, setCustomPuzzles] = useState([]);
 
-  // Sync state if initialDifficulty prop changes
+  // Ref to only react when initialDifficulty prop actually changes from the outside
+  const initialDiffRef = React.useRef(initialDifficulty);
   useEffect(() => {
-    const valid =
-      typeof initialDifficulty === "string" &&
-      ["EASY", "MEDIUM", "HARD"].includes(initialDifficulty.toUpperCase())
-        ? initialDifficulty.toUpperCase()
-        : "MEDIUM";
-    setDifficulty(valid);
-    setPuzzleIndex(0);
-    setGuesses([]);
-    setCurrentInput("");
-    setIsGameOver(false);
-    setHasWon(false);
-    setShowHint(false);
-    setHintsRevealed(0);
-    setIsShake(false);
-    setStars(0);
-    setLastPointsEarned(0);
+    if (initialDifficulty && initialDifficulty !== initialDiffRef.current) {
+      initialDiffRef.current = initialDifficulty;
+      const valid =
+        typeof initialDifficulty === "string" &&
+        ["EASY", "MEDIUM", "HARD"].includes(initialDifficulty.toUpperCase())
+          ? initialDifficulty.toUpperCase()
+          : "MEDIUM";
+      setDifficulty(valid);
+      setPuzzleIndex(0);
+      setGuesses([]);
+      setCurrentInput("");
+      setIsGameOver(false);
+      setHasWon(false);
+      setShowHint(false);
+      setHintsRevealed(0);
+      setIsShake(false);
+      setStars(0);
+      setLastPointsEarned(0);
+    }
   }, [initialDifficulty]);
 
   const activeLevelConfig =
@@ -114,17 +116,14 @@ export const WordPuzzleGame = ({
   const wordLength = activeLevelConfig.wordLength;
   const maxAttempts = activeLevelConfig.maxAttempts;
 
-  // Curated puzzle list for selected difficulty + any procedurally generated ones
+  // Curated puzzle list for selected difficulty
   const basePuzzleList = useMemo(() => {
     return getPuzzlesByDifficulty(difficulty);
   }, [difficulty]);
 
-  const combinedPuzzleList = useMemo(() => {
-    return [...basePuzzleList, ...customPuzzles];
-  }, [basePuzzleList, customPuzzles]);
-
+  // Guaranteed fresh puzzle on every puzzleIndex increment
   const currentPuzzle = useMemo(() => {
-    if (!combinedPuzzleList || combinedPuzzleList.length === 0) {
+    if (!basePuzzleList || basePuzzleList.length === 0) {
       return {
         word: "ARENA",
         definition: "A place for contests and gaming.",
@@ -132,8 +131,9 @@ export const WordPuzzleGame = ({
         category: "Noun",
       };
     }
-    return combinedPuzzleList[puzzleIndex % combinedPuzzleList.length];
-  }, [combinedPuzzleList, puzzleIndex]);
+    const idx = Math.abs(puzzleIndex) % basePuzzleList.length;
+    return basePuzzleList[idx];
+  }, [basePuzzleList, puzzleIndex]);
 
   const targetWord = (currentPuzzle?.word || "ARENA").toUpperCase();
 
@@ -157,16 +157,7 @@ export const WordPuzzleGame = ({
 
   // Functionality to get another word anytime (during or after typing)
   const handleNextWord = useCallback(() => {
-    // Advance to next puzzle or procedurally generate another word
-    const nextIdx = puzzleIndex + 1;
-    if (nextIdx >= combinedPuzzleList.length) {
-      // Procedurally generate a new word puzzle
-      const randomEntry = getRandomDictionaryWord(wordLength);
-      if (randomEntry && !combinedPuzzleList.some((p) => p.word === randomEntry.word)) {
-        setCustomPuzzles((prev) => [...prev, randomEntry]);
-      }
-    }
-    setPuzzleIndex(nextIdx);
+    setPuzzleIndex((prev) => prev + 1);
     setGuesses([]);
     setCurrentInput("");
     setIsGameOver(false);
@@ -176,7 +167,7 @@ export const WordPuzzleGame = ({
     setIsShake(false);
     setStars(0);
     setLastPointsEarned(0);
-  }, [puzzleIndex, combinedPuzzleList, wordLength]);
+  }, []);
 
   // Keyboard letter states calculation
   const keyStates = useMemo(() => {
@@ -395,12 +386,18 @@ export const WordPuzzleGame = ({
 
                   {/* Quick "Next Word" Button right on header */}
                   <button
-                    onClick={handleNextWord}
+                    id="puzzle-header-next-word-btn"
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleNextWord();
+                    }}
                     title="Get another word puzzle"
-                    className="px-2 py-0.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-[10px] uppercase tracking-wider border border-amber-500 shadow-xs flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                    className="px-2.5 py-1 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-xs uppercase tracking-wider border-2 border-amber-500 shadow-sm flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 hover:scale-102"
                   >
                     <span>Next Word</span>
-                    <ArrowRight className="w-3 h-3" />
+                    <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
                   </button>
                 </div>
                 <p className="text-xs text-slate-500">
@@ -478,8 +475,23 @@ export const WordPuzzleGame = ({
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleNextWord();
+                  }}
+                  className="text-xs font-black text-emerald-800 hover:text-emerald-950 underline cursor-pointer flex items-center gap-1"
+                  title="Switch to next word puzzle"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Get Other Word</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => {
                     setShowHint(true);
                     setHintsRevealed((prev) => prev + 1);
@@ -574,7 +586,13 @@ export const WordPuzzleGame = ({
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 px-1 text-xs">
             <div className="flex items-center flex-wrap justify-center sm:justify-start gap-2 w-full sm:w-auto">
               <button
-                onClick={handleNextWord}
+                type="button"
+                id="puzzle-bottom-next-word-btn"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleNextWord();
+                }}
                 className="px-3.5 py-2 rounded-xl bg-amber-200 hover:bg-amber-300 text-amber-950 font-black flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-xs"
                 title="Get another word puzzle immediately"
               >
@@ -703,7 +721,13 @@ export const WordPuzzleGame = ({
                   <span>Retry Word</span>
                 </button>
                 <button
-                  onClick={handleNextWord}
+                  type="button"
+                  id="puzzle-victory-next-word-btn"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleNextWord();
+                  }}
                   className="flex-1 py-2.5 px-4 rounded-xl btn-candy-green text-white font-black text-xs uppercase tracking-wider cursor-pointer flex items-center justify-center gap-1.5 transition-all shadow-sm hover:scale-102"
                 >
                   <span>Next Word Puzzle</span>
@@ -743,7 +767,7 @@ export const WordPuzzleGame = ({
                 />
               </div>
               <div className="flex flex-wrap gap-1.5">
-                {combinedPuzzleList
+                {basePuzzleList
                   .filter((p) => !dictSearch || p.word.includes(dictSearch))
                   .slice(0, 16)
                   .map((p) => (
