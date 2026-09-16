@@ -17,15 +17,14 @@
 
 namespace WordRush {
 
-// Tile states
+// Tile states (Standard Wordle)
 enum TileState {
     STATE_GRAY = 0,    // Absent
     STATE_YELLOW = 1,  // Present
-    STATE_GREEN = 2,   // Correct position
-    STATE_CYAN = 3     // 1st letter match highlight
+    STATE_GREEN = 2    // Correct position
 };
 
-// Tactical Hint structure with 1.5s pop-up duration
+// Tactical Hint structure with 3.5s pop-up duration
 struct Hint {
     int level;
     std::string title;
@@ -221,10 +220,9 @@ std::string escapeJson(const std::string& s) {
     return o.str();
 }
 
-// Word Evaluation logic (Wordle Two-Pass + Cyan 1st letter match)
+// Word Evaluation logic (Wordle Two-Pass deduction)
 struct EvalResult {
     bool isCorrect;
-    bool firstCharMatch;
     std::vector<int> states; // 0=GRAY, 1=YELLOW, 2=GREEN
 };
 
@@ -235,7 +233,6 @@ EvalResult evaluate(const std::string& rawGuess, const std::string& rawSecret) {
 
     EvalResult res;
     res.isCorrect = (guess == secret);
-    res.firstCharMatch = (!guess.empty() && !secret.empty() && guess[0] == secret[0]);
     res.states.assign(len, STATE_GRAY);
 
     std::map<char, int> freq;
@@ -294,7 +291,7 @@ std::vector<Hint> generateHints(const std::string& rawSecret, int diffLevel) {
         h.level = 3;
         h.title = "Tactical Clue: Vowels";
         h.clueText = "Contains vowels: " + vowels;
-        h.durationMs = 1500;
+        h.durationMs = 3500;
         stack.push(h);
     }
 
@@ -309,7 +306,7 @@ std::vector<Hint> generateHints(const std::string& rawSecret, int diffLevel) {
         pat += " ";
         pat += lastChar;
         h.clueText = "Ends with '" + std::string(1, lastChar) + "' (Pattern: " + pat + ")";
-        h.durationMs = 1500;
+        h.durationMs = 3500;
         stack.push(h);
     }
 
@@ -319,7 +316,7 @@ std::vector<Hint> generateHints(const std::string& rawSecret, int diffLevel) {
         h.level = 1;
         h.title = "Tactical Clue: First Letter";
         h.clueText = "Starts with '" + std::string(1, firstChar) + "' and has " + std::to_string(len) + " letters.";
-        h.durationMs = 1500;
+        h.durationMs = 3500;
         stack.push(h);
     }
 
@@ -462,7 +459,6 @@ int main(int argc, char* argv[]) {
                   << "\"guess\":\"" << WordRush::escapeJson(WordRush::toUpper(guess)) << "\","
                   << "\"secret\":\"" << WordRush::escapeJson(WordRush::toUpper(secret)) << "\","
                   << "\"isCorrect\":" << (ev.isCorrect ? "true" : "false") << ","
-                  << "\"firstCharMatch\":" << (ev.firstCharMatch ? "true" : "false") << ","
                   << "\"states\":[";
         for (size_t i = 0; i < ev.states.size(); ++i) {
             std::cout << ev.states[i] << (i + 1 < ev.states.size() ? "," : "");

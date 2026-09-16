@@ -28,10 +28,10 @@ export default function LexicalShowcase() {
               Tactical Feature
             </span>
             <h3 className="mt-1 font-heading text-2xl sm:text-3xl font-black text-[var(--wr-ink)] uppercase">
-              Smart Lexical & First-Letter Match Engine
+              Native C++ Lexical & Wordle Engine
             </h3>
             <p className="mt-1 text-xs sm:text-sm text-[var(--wr-ink)]/70">
-              Interactive testbed: see how WordRush renders words, colors the first matching letter Cyan, and detects names.
+              Interactive testbed: see how the C++ backend validates words, deduces positions, and detects dictionary entries.
             </p>
           </div>
 
@@ -133,16 +133,16 @@ export default function LexicalShowcase() {
 
               <div className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border ${
                 firstCharsMatch
-                  ? "bg-cyan-50 border-cyan-300 text-cyan-950"
+                  ? "bg-emerald-50 border-emerald-300 text-emerald-950"
                   : "bg-slate-50 border-slate-200 text-slate-800"
               }`}>
-                <CheckCircle2 className={`w-4 h-4 ${firstCharsMatch ? "text-cyan-600" : "text-slate-400"}`} />
+                <CheckCircle2 className={`w-4 h-4 ${firstCharsMatch ? "text-emerald-600" : "text-slate-400"}`} />
                 <div>
                   <span className="text-[10px] uppercase font-bold opacity-75 block leading-tight">
-                    First Char Match
+                    Starting Character
                   </span>
                   <span className="text-xs font-black uppercase">
-                    {firstCharsMatch ? `Cyan Match ('${demoInput[0]}')` : "No First Match"}
+                    {firstCharsMatch ? `Exact Match ('${demoInput[0]}')` : "Different Initial"}
                   </span>
                 </div>
               </div>

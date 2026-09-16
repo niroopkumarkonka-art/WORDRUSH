@@ -1,10 +1,10 @@
 // ============================================================================
 // WordRush Arena - Backend: Tactical Hint System (C++)
-// Simple Stack ADT (LIFO) hint manager with strict 1.5s pop-up duration
+// Simple Stack ADT (LIFO) hint manager with 3.5s (3 to 4 sec) pop-up duration
 // Difficulty levels:
 //   - Easy: 4 letters, 3 hints
 //   - Medium: 5 letters, 2 hints
-//   - Hard: 6 le tters, 1 hint
+//   - Hard: 6 letters, 1 hint
 // ============================================================================
 
 #include <cctype>
@@ -17,15 +17,15 @@
 
 namespace WordRush {
 
-// Strict pop-up time limit: 1.5 seconds (1500 milliseconds)
-constexpr int POPUP_TIME_LIMIT_MS = 1500;
-constexpr double POPUP_TIME_LIMIT_SEC = 1.5;
+// Strict pop-up time limit: 3.5 seconds (3500 milliseconds)
+constexpr int POPUP_TIME_LIMIT_MS = 3500;
+constexpr double POPUP_TIME_LIMIT_SEC = 3.5;
 
 struct Hint {
   int level;            // 1 = starting letter, 2 = pattern, 3 = vowels/clue
   std::string title;    // Pop-up title
   std::string clueText; // Content of the clue
-  int durationMs;       // Pop-up display duration: strictly 1500 ms (1.5 sec)
+  int durationMs;       // Pop-up display duration: strictly 3500 ms (3.5 sec)
 };
 
 class HintManager {
@@ -144,7 +144,7 @@ public:
 
 #ifdef STANDALONE_HINTS
 int main() {
-  std::cout << "--- WordRush C++ Hints Test (1.5s Pop-up Duration) ---"
+  std::cout << "--- WordRush C++ Hints Test (3.5s Pop-up Duration) ---"
             << std::endl;
   WordRush::HintManager manager(2); // Medium: 2 hints
   manager.prepareHints("CANDY");

@@ -1,7 +1,7 @@
 // ============================================================================
 // WordRush Arena - Backend: Game Engine & Session Manager (C++)
 // Simple turn-based 1v1 cipher duel state machine and scoring
-// Strict 1.5s pop-up duration limit constant
+// 3 to 4 sec (3500 ms) pop-up duration limit constant
 // ============================================================================
 
 #include <string>
@@ -14,7 +14,7 @@
 namespace WordRush {
 
 constexpr int MAX_ATTEMPTS = 6;
-constexpr int POPUP_TIME_LIMIT_MS = 1500; // Strictly 1.5 seconds
+constexpr int POPUP_TIME_LIMIT_MS = 3500; // 3.5 seconds
 
 enum GamePhase {
     PHASE_LOBBY,
@@ -37,8 +37,7 @@ struct Player {
 
 struct GuessRecord {
     std::string guess;
-    std::vector<int> letterStates; // 0=GRAY, 1=YELLOW, 2=GREEN, 3=CYAN (1st match)
-    bool firstCharMatch;
+    std::vector<int> letterStates; // 0=GRAY, 1=YELLOW, 2=GREEN
     int attemptNumber;
 };
 
@@ -120,13 +119,12 @@ public:
     }
 
     // Guesser submits guess
-    bool submitGuess(const std::string& guessWord, bool isCorrect, bool firstCharMatch, const std::vector<int>& states) {
+    bool submitGuess(const std::string& guessWord, bool isCorrect, const std::vector<int>& states) {
         if (phase != PHASE_GUESSING || rounds.empty()) return false;
         Round& current = rounds.back();
 
         GuessRecord record;
         record.guess = guessWord;
-        record.firstCharMatch = firstCharMatch;
         record.letterStates = states;
         record.attemptNumber = static_cast<int>(current.guesses.size()) + 1;
 

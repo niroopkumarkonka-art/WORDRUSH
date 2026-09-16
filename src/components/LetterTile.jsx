@@ -25,28 +25,6 @@ export const LetterTile = ({
     );
   }
 
-  // 2. SPECIAL: FIRST CHARACTER MATCH TILE (Cyan / Electric Azure - Distinct from Green)
-  if (isFirstCharMatch || state === "FIRST_MATCH") {
-    return (
-      <div
-        id={`tile-first-match-${index}-${letter}`}
-        className={`relative flex items-center justify-center rounded-2xl font-black uppercase text-white select-none transition-all duration-300 animate-flip bg-gradient-to-b from-cyan-300 via-sky-500 to-blue-600 border-2 border-cyan-100 shadow-[0_5px_0_#0369a1,0_8px_16px_rgba(14,165,233,0.4)] ${sizeClasses}`}
-        style={{ animationDelay: `${index * 80}ms` }}
-        title="First Character Match!"
-      >
-        {/* Top gloss highlight */}
-        <div className="absolute top-1 inset-x-2 h-2.5 rounded-t-xl bg-white/60 pointer-events-none" />
-        <span className="z-10 leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]">
-          {letter}
-        </span>
-        {/* Subtle Badge Tag */}
-        <span className="absolute -top-2 -right-1 text-[8px] font-black uppercase px-1 py-0.2 rounded-full bg-cyan-200 text-cyan-950 border border-white shadow-xs pointer-events-none">
-          1st
-        </span>
-      </div>
-    );
-  }
-
   // 3. TENTATIVE / TYPED LETTER (Freshly entered letter)
   if (state === "TENTATIVE" || (state === "EMPTY" && letter)) {
     return (

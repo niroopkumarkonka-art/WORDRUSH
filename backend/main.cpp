@@ -3,11 +3,10 @@
 // Simple, elegant backend engine driver for WordRush Arena
 //
 // Key Specifications:
-// - Pop-up time limit: strictly 1.5 seconds (1500 ms)
-// - First-letter match: special Cyan highlight indicator
+// - Pop-up time limit: 3 to 4 seconds (strictly 3500 ms)
+// - Wordle deduction: Green (correct position), Yellow (present), Gray (absent)
 // - Levels: Easy (4 letters, 3 hints), Medium (5 letters, 2 hints), Hard (6 letters, 1 hint)
 // - No duplicate letters in secret words
-// - Wordle deduction: Green (correct), Yellow (present), Gray (absent)
 // ============================================================================
 
 #include <iostream>
@@ -25,16 +24,15 @@
 namespace WordRush {
 
 // Strict constants
-constexpr int POPUP_TIME_LIMIT_MS = 1500;
-constexpr double POPUP_TIME_LIMIT_SEC = 1.5;
+constexpr int POPUP_TIME_LIMIT_MS = 3500;
+constexpr double POPUP_TIME_LIMIT_SEC = 3.5;
 constexpr int MAX_ATTEMPTS = 6;
 
-// Letter match states
+// Letter match states (Standard Wordle)
 enum LetterState {
     GRAY = 0,    // Letter not in word
     YELLOW = 1,  // Letter in word, wrong position
-    GREEN = 2,   // Letter in word, exact position
-    CYAN = 3     // Special: First letter match indicator
+    GREEN = 2    // Letter in word, exact position
 };
 
 // Player profile
@@ -50,11 +48,10 @@ struct Player {
 struct GuessEvaluation {
     std::string guess;
     bool isExactMatch;
-    bool firstLetterMatch;
     std::vector<LetterState> letterStates;
 };
 
-// Tactical Hint structure with 1.5s pop-up duration
+// Tactical Hint structure with 3.5s pop-up duration
 struct TacticalHint {
     int level;
     std::string title;
@@ -85,7 +82,6 @@ public:
         GuessEvaluation result;
         result.guess = guess;
         result.isExactMatch = (guess == secret);
-        result.firstLetterMatch = (!guess.empty() && !secret.empty() && guess[0] == secret[0]);
         result.letterStates.assign(len, GRAY);
 
         std::map<char, int> availableChars;
@@ -139,7 +135,7 @@ public:
             h2.level = 2;
             h2.title = "Tactical Clue: End Pattern";
             h2.clue = "Ends with '" + std::string(1, lastChar) + "' (Word length: " + std::to_string(secret.length()) + ")";
-            h2.popupDurationMs = POPUP_TIME_LIMIT_MS; // 1.5 sec
+            h2.popupDurationMs = POPUP_TIME_LIMIT_MS; // 3.5 sec
             stack.push(h2);
         }
 
@@ -149,7 +145,7 @@ public:
             h1.level = 1;
             h1.title = "Tactical Clue: Starting Letter";
             h1.clue = "Begins with letter '" + std::string(1, firstChar) + "'";
-            h1.popupDurationMs = POPUP_TIME_LIMIT_MS; // 1.5 sec
+            h1.popupDurationMs = POPUP_TIME_LIMIT_MS; // 3.5 sec
             stack.push(h1);
         }
     }
@@ -170,8 +166,8 @@ public:
 int main() {
     std::cout << "=========================================================" << std::endl;
     std::cout << "  WordRush Arena - C++ Backend Engine                    " << std::endl;
-    std::cout << "  * Pop-up Time Limit: 1.5s (" << WordRush::POPUP_TIME_LIMIT_MS << " ms)         " << std::endl;
-    std::cout << "  * 1st-Letter Match : Cyan Highlight                     " << std::endl;
+    std::cout << "  * Pop-up Time Limit: 3.5s (" << WordRush::POPUP_TIME_LIMIT_MS << " ms)         " << std::endl;
+    std::cout << "  * Wordle Deduction : Green, Yellow, Gray                " << std::endl;
     std::cout << "  * Max Attempts     : 6 Tries per Round                  " << std::endl;
     std::cout << "=========================================================" << std::endl << std::endl;
 
@@ -202,10 +198,6 @@ int main() {
 
         std::cout << "\nAttempt " << (attempt + 1) << "/" << WordRush::MAX_ATTEMPTS 
                   << ": Guess = \"" << guess << "\"" << std::endl;
-
-        if (eval.firstLetterMatch) {
-            std::cout << "  >> [CYAN 1ST LETTER MATCH]: First letter '" << guess[0] << "' matches secret!" << std::endl;
-        }
 
         std::cout << "  Tiles: ";
         for (size_t i = 0; i < eval.letterStates.size(); ++i) {

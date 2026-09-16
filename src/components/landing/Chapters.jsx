@@ -101,15 +101,12 @@ export default function Chapters() {
         <Chapter
           num="02"
           testId="chapter-2"
-          title="Read the board & First-Letter Match"
+          title="Read the board & Crack the Code"
           flip
-          body="Cyan glows when the first letter matches! Green means position is spot on. Yellow means in the word, wrong spot. Gray means let it go. Six attempts to crack the code."
+          body="Green means position is spot on. Yellow means the letter is in the word, but in a different spot. Gray means let it go. You have six tactical attempts to crack the code."
           visual={
             <div className="flex gap-2 sm:gap-3">
-              <div className="wr-tile flex h-11 w-11 sm:h-13 sm:w-13 items-center justify-center rounded-xl font-heading text-lg sm:text-xl font-black bg-gradient-to-b from-cyan-400 to-blue-600 text-white shadow-[0_4px_0_#0284c7] relative">
-                C
-                <span className="absolute -top-1.5 -right-1 text-[8px] font-bold px-1 rounded-full bg-cyan-200 text-cyan-950">1st</span>
-              </div>
+              <MiniTile ch="C" variant="wr-tile-green" />
               <MiniTile ch="R" variant="wr-tile-green" />
               <MiniTile ch="A" variant="wr-tile-yellow" />
               <MiniTile ch="N" variant="wr-tile-gray" />
