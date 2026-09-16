@@ -25,17 +25,12 @@ export const GameBoard = ({
     for (let c = 0; c < wordLength; c++) {
       let char = "";
       let state = "EMPTY";
-      let isFirstMatch = false;
 
       if (isPastAttempt) {
         char = gameBoard[r]?.[c] || "";
         const numState = boardStates[r]?.[c] ?? 0;
         if (numState === 2) {
           state = "GREEN";
-          // If first character matched between guess and target
-          if (c === 0) {
-            isFirstMatch = true;
-          }
         } else if (numState === 1) {
           state = "YELLOW";
         } else {
@@ -44,10 +39,6 @@ export const GameBoard = ({
       } else if (isCurrentAttempt) {
         char = currentInput[c] || "";
         state = char ? "TENTATIVE" : "EMPTY";
-        // If first character matches target secret word
-        if (c === 0 && char && targetSecretWord && char.toUpperCase() === targetSecretWord[0]?.toUpperCase()) {
-          isFirstMatch = true;
-        }
       }
 
       rowTiles.push(
@@ -57,7 +48,6 @@ export const GameBoard = ({
           state={state}
           index={c}
           size={wordLength === 6 ? "sm" : wordLength === 5 ? "md" : "lg"}
-          isFirstCharMatch={isFirstMatch}
         />
       );
     }

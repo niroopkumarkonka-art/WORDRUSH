@@ -19,7 +19,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import confetti from "canvas-confetti";
-import { socketService } from "./services/socket";
+import { socketService, generateWheelLetters } from "./services/socket";
 import { classifyWord } from "./utils/wordClassifier";
 import { RealisticBackground } from "./components/RealisticBackground";
 import { Logo } from "./components/Logo";
@@ -318,83 +318,46 @@ export default function App() {
       return;
     }
 
-    let roomCreated = false;
-    // Call REST endpoint if socket is not immediately open
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
-      const res = await fetch("/api/rooms/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: controller.signal,
-        body: JSON.stringify({
-          playerId,
-          username,
-          avatar,
-          wordLength: wLen,
-          totalRounds: tRounds,
-        }),
-      });
-      clearTimeout(timeoutId);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.room) {
-          setRoom(data.room);
-          addToast("success", `Game room created! Share code: ${data.roomCode}`, "Room Ready");
-          roomCreated = true;
-        }
-      }
-    } catch (err) {
-      // REST endpoint not available (e.g. static GitHub Pages hosting)
+    // Client simulation / offline P2P fallback: use single authoritative localRoom
+    if (socketService.localRoom) {
+      setRoom(socketService.localRoom);
+      try {
+        localStorage.setItem(`wordrush_active_room_${socketService.localRoom.roomCode}`, JSON.stringify(socketService.localRoom));
+      } catch {}
+      addToast("success", `Game room created! Share code: ${socketService.localRoom.roomCode}`, "Room Ready");
+      return;
     }
 
-    // Static / Offline fallback: generate 5-character code in identical format as C++ engine
-    if (!roomCreated) {
-      const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-      let localCode = "";
-      for (let i = 0; i < 5; i++) {
-        localCode += charset[Math.floor(Math.random() * charset.length)];
-      }
-
-      const hostPlayer = {
-        playerId,
-        username,
-        score: 0,
-        readyStatus: false,
-        connectionStatus: true,
-        roundsWon: 0,
-        wordsGuessed: 0,
-        hintsUsed: 0,
-        profile: {
-          username,
-          avatar,
-          totalGamesPlayed: 0,
-          totalWins: 0,
-          totalLosses: 0,
-          totalDraws: 0,
-          totalPoints: 0,
-        },
-      };
-
-      const fallbackRoom = {
-        roomCode: localCode,
-        players: [hostPlayer, null],
-        playerCount: 1,
-        wordLength: wLen,
-        totalRounds: tRounds,
-        currentRoundIndex: 0,
-        wordSetterIndex: 0,
-        guesserIndex: 1,
-        phase: "LOBBY",
-        currentRound: null,
-        roundHistory: [],
-        recentEvents: [`Room ${localCode} created by ${username}`],
-        hints: [],
-        createdAt: Date.now(),
-      };
-
-      setRoom(fallbackRoom);
-      addToast("success", `Game room created! Share code: ${localCode}`, "Room Ready");
+    // Call REST endpoint if on local server
+    if (!window.location.hostname.endsWith("github.io")) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        const res = await fetch("/api/rooms/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            playerId,
+            username,
+            avatar,
+            wordLength: wLen,
+            totalRounds: tRounds,
+          }),
+        });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.room) {
+            setRoom(data.room);
+            try {
+              localStorage.setItem(`wordrush_active_room_${data.roomCode}`, JSON.stringify(data.room));
+            } catch {}
+            addToast("success", `Game room created! Share code: ${data.roomCode}`, "Room Ready");
+            return;
+          }
+        }
+      } catch (err) {}
     }
   };
 
@@ -647,8 +610,11 @@ export default function App() {
     if (room?.currentRound?.wheelLetters && room.currentRound.wheelLetters.length > 0) {
       return room.currentRound.wheelLetters;
     }
+    if (room?.currentRound?.secretWord) {
+      return generateWheelLetters(room.currentRound.secretWord);
+    }
     return ["S", "A", "U", "C", "E", "T", "F"];
-  }, [room?.currentRound?.wheelLetters]);
+  }, [room?.currentRound?.wheelLetters, room?.currentRound?.secretWord]);
 
   return (
     <div className="relative min-h-screen w-full text-slate-800 flex flex-col justify-between selection:bg-amber-300 selection:text-amber-950 font-sans overflow-x-hidden">
@@ -1100,13 +1066,6 @@ export default function App() {
                       word={isGuesser ? currentGuessInput : ""}
                       targetLength={room.wordLength}
                       isError={isBoardShake}
-                      firstCharMatch={Boolean(
-                        isGuesser &&
-                        currentGuessInput &&
-                        room.currentRound?.secretWord &&
-                        currentGuessInput[0]?.toUpperCase() ===
-                        room.currentRound.secretWord[0]?.toUpperCase()
-                      )}
                     />
 
                     {isGuesser ? (

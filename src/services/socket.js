@@ -54,6 +54,32 @@ function evaluateWordleGuess(secret, guess, wordLength) {
   return states;
 }
 
+export function generateWheelLetters(secretWord) {
+  if (!secretWord) return ["S", "A", "U", "C", "E", "T", "F"];
+  const letters = secretWord.toUpperCase().split("");
+  const vowels = ["A", "E", "I", "O", "U"];
+  const consonants = ["R", "S", "T", "L", "N", "C", "D", "M", "P", "F", "G", "H", "B"];
+  
+  const targetTotal = Math.max(letters.length + 1, 7);
+  const extraNeeded = targetTotal - letters.length;
+  
+  for (let i = 0; i < extraNeeded; i++) {
+    const pool = i % 2 === 0 ? consonants : vowels;
+    const available = pool.filter((c) => !letters.includes(c));
+    const randomChar = available.length > 0
+      ? available[Math.floor(Math.random() * available.length)]
+      : pool[Math.floor(Math.random() * pool.length)];
+    letters.push(randomChar);
+  }
+
+  for (let i = letters.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [letters[i], letters[j]] = [letters[j], letters[i]];
+  }
+
+  return letters;
+}
+
 class SocketService {
   constructor() {
     this.socket = null;
@@ -550,7 +576,11 @@ class SocketService {
         if (!this.localRoom || !this.localRoom.currentRound) return;
         const word = (payload.secretWord || payload.word || "").toUpperCase().trim();
         this.localRoom.currentRound.secretWord = word;
+        this.localRoom.currentRound.wheelLetters = generateWheelLetters(word);
         this.localRoom.phase = "GUESSING";
+        try {
+          localStorage.setItem(`wordrush_active_room_${this.localRoom.roomCode}`, JSON.stringify(this.localRoom));
+        } catch {}
 
         // If guesser is bot, bot makes an automated guess
         const guesser = this.localRoom.players[this.localRoom.guesserIndex];
@@ -614,7 +644,12 @@ class SocketService {
             if (this.localRoom.currentRoundIndex + 1 >= this.localRoom.totalRounds) {
               this.localRoom.phase = "GAME_OVER";
               this.emitInternal("GAME_OVER", { room: this.localRoom });
+            } else {
+              this.localRoom.phase = "ROUND_RESULT";
             }
+            try {
+              localStorage.setItem(`wordrush_active_room_${this.localRoom.roomCode}`, JSON.stringify(this.localRoom));
+            } catch {}
           }
         }
         this.dispatchRoomUpdate("ROOM_SYNC", this.localRoom);
@@ -686,6 +721,9 @@ class SocketService {
               });
             }, 1200);
           }
+          try {
+            localStorage.setItem(`wordrush_active_room_${this.localRoom.roomCode}`, JSON.stringify(this.localRoom));
+          } catch {}
         }
         this.dispatchRoomUpdate("ROOM_SYNC", this.localRoom);
         break;

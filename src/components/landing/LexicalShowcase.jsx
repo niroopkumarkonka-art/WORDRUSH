@@ -31,7 +31,7 @@ export default function LexicalShowcase() {
               Native C++ Lexical & Wordle Engine
             </h3>
             <p className="mt-1 text-xs sm:text-sm text-[var(--wr-ink)]/70">
-              Interactive testbed: see how the C++ backend validates words, deduces positions, and detects dictionary entries.
+              Interactive testbed: see how WordRush renders words, colors the first matching letter Cyan, and detects names.
             </p>
           </div>
 
@@ -44,11 +44,10 @@ export default function LexicalShowcase() {
                   setDemoInput(item.word);
                   setDemoCompareWord(item.target);
                 }}
-                className={`text-[11px] font-extrabold px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                  demoInput === item.word
+                className={`text-[11px] font-extrabold px-3 py-1.5 rounded-xl transition-all cursor-pointer ${demoInput === item.word
                     ? "bg-[var(--wr-yellow)] text-[var(--wr-ink)] shadow-xs font-black border border-[var(--wr-yellow-deep)]"
                     : "bg-white/80 hover:bg-white text-[var(--wr-ink)] border border-[var(--wr-ink)]/15"
-                }`}
+                  }`}
               >
                 {item.label}
               </button>
@@ -131,11 +130,10 @@ export default function LexicalShowcase() {
                 </div>
               </div>
 
-              <div className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border ${
-                firstCharsMatch
+              <div className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border ${firstCharsMatch
                   ? "bg-emerald-50 border-emerald-300 text-emerald-950"
                   : "bg-slate-50 border-slate-200 text-slate-800"
-              }`}>
+                }`}>
                 <CheckCircle2 className={`w-4 h-4 ${firstCharsMatch ? "text-emerald-600" : "text-slate-400"}`} />
                 <div>
                   <span className="text-[10px] uppercase font-bold opacity-75 block leading-tight">

@@ -133,10 +133,6 @@ export const LetterWheel = ({
     setConnectedIndices([]);
   };
 
-  const handleNodeClick = (index) => {
-    if (isDragging || disabled) return;
-    onLetterAdd(wheelLetters[index]);
-  };
 
   return (
     <div className="flex flex-col items-center select-none">
@@ -218,10 +214,6 @@ export const LetterWheel = ({
             <div
               key={`wheel-node-${index}-${char}`}
               id={`wheel-node-${char}-${index}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleNodeClick(index);
-              }}
               style={{
                 left: `${leftPercent}%`,
                 top: `${topPercent}%`,
