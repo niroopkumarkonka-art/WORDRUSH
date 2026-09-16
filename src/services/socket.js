@@ -266,7 +266,7 @@ class SocketService {
 
   handleIncomingP2PMessage(type, payload) {
     // If we are host and received a guest join request:
-    if (type === "P2P_JOIN_REQUEST" && this.localRoom) {
+    if ((type === "P2P_JOIN_REQUEST" || type === "JOIN_ROOM") && this.localRoom) {
       if (!this.localRoom.players[1] || this.localRoom.players[1].playerId === payload.playerId) {
         this.localRoom.players[1] = {
           playerId: payload.playerId || "p2_" + Math.random().toString(36).substring(2, 8),
@@ -283,7 +283,12 @@ class SocketService {
           },
         };
         this.localRoom.playerCount = 2;
+        this.localRoom.recentEvents = this.localRoom.recentEvents || [];
         this.localRoom.recentEvents.push(`${payload.username || "Challenger"} joined the room!`);
+
+        try {
+          localStorage.setItem(`wordrush_active_room_${this.localRoom.roomCode}`, JSON.stringify(this.localRoom));
+        } catch {}
 
         const syncMsg = { type: "ROOM_SYNC", payload: this.localRoom };
         const joinedMsg = { type: "JOINED_SUCCESS", payload: { roomCode: this.localRoom.roomCode, room: this.localRoom } };
@@ -355,6 +360,9 @@ class SocketService {
         };
 
         this.initPeerHost(roomCode);
+        try {
+          localStorage.setItem(`wordrush_active_room_${roomCode}`, JSON.stringify(this.localRoom));
+        } catch {}
         this.dispatchRoomUpdate("ROOM_CREATED", { roomCode, room: this.localRoom });
         this.dispatchRoomUpdate("ROOM_SYNC", this.localRoom);
         break;

@@ -427,11 +427,14 @@ export default function App() {
     });
     setIsMatchmakerOpen(false);
 
-    if (!socketService.connected) {
+    if (!socketService.connected && !window.location.hostname.endsWith("github.io")) {
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
         const res = await fetch("/api/rooms/join", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
           body: JSON.stringify({
             roomCode: cleanCode,
             playerId,
@@ -439,18 +442,49 @@ export default function App() {
             avatar,
           }),
         });
-        const data = await res.json();
-        if (data.success && data.room) {
-          setRoom(data.room);
-          setCurrentView("MULTIPLAYER");
-          addToast("success", `Joined room ${data.roomCode}!`, "Ready to Play");
-        } else {
-          addToast("error", data.error || "Failed to join room");
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.room) {
+            setRoom(data.room);
+            setCurrentView("MULTIPLAYER");
+            addToast("success", `Joined room ${data.roomCode}!`, "Ready to Play");
+            return;
+          }
         }
       } catch (err) {
-        addToast("error", err.message || "Failed to join room");
+        // Fallback to P2P and cross-tab storage
       }
     }
+
+    // P2P / Local cross-tab lookup:
+    try {
+      const stored = localStorage.getItem(`wordrush_active_room_${cleanCode}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && (!parsed.players[1] || parsed.players[1].playerId === playerId)) {
+          parsed.players[1] = {
+            playerId,
+            username,
+            score: 0,
+            readyStatus: false,
+            connectionStatus: true,
+            roundsWon: 0,
+            wordsGuessed: 0,
+            hintsUsed: 0,
+            profile: { username, avatar },
+          };
+          parsed.playerCount = 2;
+          parsed.recentEvents = parsed.recentEvents || [];
+          parsed.recentEvents.push(`${username} joined the battle!`);
+          localStorage.setItem(`wordrush_active_room_${cleanCode}`, JSON.stringify(parsed));
+          setRoom(parsed);
+          setCurrentView("MULTIPLAYER");
+          addToast("success", `Joined room ${cleanCode}!`, "Ready to Play");
+          socketService.send("ROOM_SYNC", parsed);
+        }
+      }
+    } catch {}
   };
 
   const handleLeaveRoom = () => {

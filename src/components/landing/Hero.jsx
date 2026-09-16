@@ -259,9 +259,9 @@ export default function Hero({
             </button>
           </div>
 
-          <div className="flex items-center gap-1.5 text-cyan-200 font-semibold text-[11px]">
-            <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
-            <span>First matching letter glows Cyan!</span>
+          <div className="flex items-center gap-1.5 text-amber-200 font-semibold text-[11px]">
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span>Classic Wordle Cipher Duel & Lexical Solver</span>
           </div>
         </div>
 
