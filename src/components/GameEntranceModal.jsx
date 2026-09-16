@@ -91,9 +91,6 @@ export const GameEntranceModal = ({
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
               <span>Select Difficulty Level</span>
             </label>
-            <span className="text-[11px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
-              First letter matches turn Cyan!
-            </span>
           </div>
 
           <div className="grid grid-cols-3 gap-2">

@@ -6,7 +6,7 @@ const ToastItem = ({ toast, onDismiss }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (onDismiss) onDismiss(toast.id);
-    }, 1500); // 1.5 sec only
+    }, 3500); // 3.5 sec popup timing
     return () => clearTimeout(timer);
   }, [toast.id, onDismiss]);
 

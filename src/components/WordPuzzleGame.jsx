@@ -311,7 +311,7 @@ export const WordPuzzleGame = ({
     setStars(0);
     setLastPointsEarned(0);
     setPointsNotification(`🎲 Random ${wordLength}-Letter Puzzle Generated!`);
-    setTimeout(() => setPointsNotification(null), 3000);
+    setTimeout(() => setPointsNotification(null), 3500);
   }, [difficulty, wordLength, basePuzzleList]);
 
   // Keyboard letter states calculation
@@ -376,7 +376,7 @@ export const WordPuzzleGame = ({
 
       setLastPointsEarned(totalPointsWon);
       setPointsNotification(`+${totalPointsWon} Points Gained! 🌟 Word Saved!`);
-      setTimeout(() => setPointsNotification(null), 3000);
+      setTimeout(() => setPointsNotification(null), 3500);
 
       // Persist cumulative player points
       setPlayerPoints((prev) => {
@@ -448,7 +448,7 @@ export const WordPuzzleGame = ({
     const solverPoints = 100;
     setLastPointsEarned(solverPoints);
     setPointsNotification(`+${solverPoints} Points! (Auto-Solved & Saved ⚡)`);
-    setTimeout(() => setPointsNotification(null), 3000);
+    setTimeout(() => setPointsNotification(null), 3500);
 
     setPlayerPoints((prev) => {
       const next = prev + solverPoints;
@@ -549,7 +549,7 @@ export const WordPuzzleGame = ({
   const handleCopyWord = (word) => {
     navigator.clipboard?.writeText(word);
     setCopiedWord(word);
-    setTimeout(() => setCopiedWord(null), 2000);
+    setTimeout(() => setCopiedWord(null), 3500);
   };
 
   // Filtered saved words
@@ -818,14 +818,10 @@ export const WordPuzzleGame = ({
                   {Array.from({ length: wordLength }).map((_, colIndex) => {
                     const letter = rowGuess[colIndex] || "";
                     let state = "EMPTY";
-                    let isFirstCharMatch = false;
 
                     if (isPastGuess) {
                       if (letter === targetWord[colIndex]) {
                         state = "GREEN";
-                        if (colIndex === 0) {
-                          isFirstCharMatch = true;
-                        }
                       } else if (targetWord.includes(letter)) {
                         state = "YELLOW";
                       } else {
@@ -833,9 +829,6 @@ export const WordPuzzleGame = ({
                       }
                     } else if (isCurrentRow && letter) {
                       state = "TENTATIVE";
-                      if (colIndex === 0 && letter === targetWord[0]) {
-                        isFirstCharMatch = true;
-                      }
                     }
 
                     return (
@@ -851,7 +844,7 @@ export const WordPuzzleGame = ({
                             ? "md"
                             : "lg"
                         }
-                        isFirstCharMatch={isFirstCharMatch}
+                        isFirstCharMatch={false}
                       />
                     );
                   })}
@@ -1071,7 +1064,7 @@ export const WordPuzzleGame = ({
               </span>
             </button>
             <span className="text-[11px] text-slate-500 font-medium">
-              Click any word to fill • First letter matches get Cyan
+              Click any word to fill • Solve the cipher
             </span>
           </div>
 

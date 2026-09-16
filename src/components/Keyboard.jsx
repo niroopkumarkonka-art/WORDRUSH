@@ -15,6 +15,7 @@ export const Keyboard = ({
   letterStates = {},
   keyStates = {},
   disabled = false,
+  listenGlobalKeyboard = true,
 }) => {
   const handleChar = (char) => {
     if (typeof onChar === "function") onChar(char);
@@ -32,7 +33,7 @@ export const Keyboard = ({
   };
 
   useEffect(() => {
-    if (disabled) return;
+    if (disabled || !listenGlobalKeyboard) return;
 
     const handleKeyDown = (e) => {
       if (
@@ -58,7 +59,7 @@ export const Keyboard = ({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onChar, onEnter, onDelete, onKeyPress, disabled]);
+  }, [onChar, onEnter, onDelete, onKeyPress, disabled, listenGlobalKeyboard]);
 
   const getKeyStyle = (key) => {
     if (key === "ENTER") {

@@ -32,7 +32,7 @@ export const RoomCode = ({ roomCode = "" }) => {
     const ok = await copyTextSafely(roomCode);
     if (ok) {
       setCopiedCode(true);
-      setTimeout(() => setCopiedCode(false), 1500);
+      setTimeout(() => setCopiedCode(false), 3500);
     }
   };
 
@@ -43,7 +43,7 @@ export const RoomCode = ({ roomCode = "" }) => {
     const ok = await copyTextSafely(inviteUrl);
     if (ok) {
       setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 1500);
+      setTimeout(() => setCopiedLink(false), 3500);
     }
   };
 
