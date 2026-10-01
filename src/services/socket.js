@@ -472,10 +472,18 @@ class SocketService {
         const code = (payload.roomCode || "").toUpperCase().trim();
         this.initPeerJoin(code, payload);
 
-        // If room is present locally in same browser tab/window:
-        if (this.localRoom && this.localRoom.roomCode === code) {
-          if (!this.localRoom.players[1]) {
-            this.localRoom.players[1] = {
+        // Check localRoom or localStorage:
+        let target = (this.localRoom && this.localRoom.roomCode === code) ? this.localRoom : null;
+        if (!target) {
+          try {
+            const raw = localStorage.getItem(`wordrush_active_room_${code}`);
+            if (raw) target = JSON.parse(raw);
+          } catch {}
+        }
+
+        if (target && target.roomCode === code) {
+          if (!target.players[1] || target.players[1].playerId === payload.playerId) {
+            target.players[1] = {
               playerId: payload.playerId || "p2_" + Math.random().toString(36).substring(2, 8),
               username: payload.username || "Challenger",
               score: 0,
@@ -489,8 +497,14 @@ class SocketService {
                 avatar: payload.avatar || "🐻",
               },
             };
-            this.localRoom.playerCount = 2;
+            target.playerCount = 2;
+            target.recentEvents = target.recentEvents || [];
+            target.recentEvents.push(`${payload.username || "Challenger"} joined the room!`);
+            try {
+              localStorage.setItem(`wordrush_active_room_${code}`, JSON.stringify(target));
+            } catch {}
           }
+          this.localRoom = target;
           this.dispatchRoomUpdate("JOINED_SUCCESS", { roomCode: code, room: this.localRoom });
           this.dispatchRoomUpdate("ROOM_SYNC", this.localRoom);
         }

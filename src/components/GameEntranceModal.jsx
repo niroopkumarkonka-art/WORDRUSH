@@ -264,11 +264,18 @@ export const GameEntranceModal = ({
                 type="text"
                 maxLength={5}
                 value={joinCodeInput}
-                onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
+                onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && joinCodeInput.trim().length === 5) {
+                    handleJoinWithCode();
+                  }
+                }}
+                autoFocus
                 placeholder="CODE"
                 className="flex-1 px-4 py-3 rounded-2xl bg-white border-2 border-sky-300 text-slate-800 text-center font-black text-xl uppercase tracking-widest focus:outline-none focus:border-sky-500 shadow-inner"
               />
               <button
+                type="button"
                 onClick={handleJoinWithCode}
                 disabled={joinCodeInput.trim().length !== 5}
                 className="px-6 py-3 rounded-2xl btn-candy-blue text-white font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed hover:scale-102 active:scale-98"

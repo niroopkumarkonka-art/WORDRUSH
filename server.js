@@ -124,24 +124,13 @@ export class CppBackendEngine {
 // Real-Time Lexical Arbiter: Validates words against C++ Dictionary & Gemini AI
 // If words are not present in dictionary, AI is consulted and dynamically caches it!
 // ============================================================================
-export async function verifyWordWithAi(word, length, allowDuplicates = false) {
+export async function verifyWordWithAi(word, length, allowDuplicates = true) {
   const clean = (word || "").toUpperCase().trim();
   if (!clean || clean.length !== length) {
     return { valid: false, error: `Word must be exactly ${length} letters long.` };
   }
   if (!/^[A-Z]+$/.test(clean)) {
     return { valid: false, error: "Word can only contain alphabetic letters (A-Z)." };
-  }
-
-  // Check duplicate letters only when not allowed (e.g. secret words)
-  if (!allowDuplicates) {
-    const seen = new Set();
-    for (let i = 0; i < clean.length; i++) {
-      if (seen.has(clean[i])) {
-        return { valid: false, error: `Duplicate letters not allowed in secret words ('${clean[i]}' repeats).` };
-      }
-      seen.add(clean[i]);
-    }
   }
 
   // 1. Check native C++ Dictionary first (instant O(1))
@@ -548,8 +537,8 @@ export class ArenaEngine {
     return code;
   }
 
-  createRoom(hostPlayer) {
-    const roomCode = this.generateRoomCode();
+  createRoom(hostPlayer, customCode = null) {
+    const roomCode = (customCode || this.generateRoomCode()).trim().toUpperCase();
     const room = {
       roomCode,
       players: [hostPlayer, null],
@@ -593,7 +582,8 @@ export class ArenaEngine {
     }
 
     if (room.players[0]?.username?.toLowerCase() === guestPlayer.username?.toLowerCase()) {
-      return { success: false, error: "A player with this name is already in the room." };
+      guestPlayer.username = `${guestPlayer.username} #2`;
+      if (guestPlayer.profile) guestPlayer.profile.username = guestPlayer.username;
     }
 
     room.players[1] = guestPlayer;
@@ -1331,7 +1321,7 @@ app.post("/api/admin/login", (req, res) => {
 
 app.post("/api/rooms/create", (req, res) => {
   try {
-    const { playerId, username, avatar, wordLength = 5, totalRounds = 3 } = req.body || {};
+    const { playerId, username, avatar, wordLength = 5, totalRounds = 3, roomCode: customCode } = req.body || {};
     const pId = playerId || "p_" + Math.random().toString(36).substring(2, 9);
     const pName = (username || "Player").trim().slice(0, 15) || "Player";
     const pAvatar = avatar || "🦊";
@@ -1339,7 +1329,7 @@ app.post("/api/rooms/create", (req, res) => {
     const player = createPlayer(pId, pName);
     player.profile.avatar = pAvatar;
 
-    const room = arenaEngine.createRoom(player);
+    const room = arenaEngine.createRoom(player, customCode);
     arenaEngine.updateConfig(room.roomCode, Number(wordLength), Number(totalRounds));
     const sanitized = arenaEngine.sanitizeRoomForPlayer(room, pId);
 
@@ -1445,7 +1435,7 @@ wss.on("connection", (ws) => {
           const player = createPlayer(pId, pName);
           player.profile.avatar = pAvatar;
 
-          const room = arenaEngine.createRoom(player);
+          const room = arenaEngine.createRoom(player, payload?.roomCode);
           arenaEngine.updateConfig(room.roomCode, wordLength, totalRounds);
 
           boundRoomCode = room.roomCode;

@@ -32,6 +32,43 @@ import {
   lookupWord,
 } from "../utils/dictionary";
 
+// Two-pass Wordle deduction with exact duplicate letter handling (sorts out repeating letters)
+export function evaluateWordleGuessStates(guess, secret) {
+  if (!guess || !secret) return [];
+  const g = guess.toUpperCase();
+  const s = secret.toUpperCase();
+  const len = Math.min(g.length, s.length);
+  const states = new Array(len).fill("GRAY");
+  const targetCounts = {};
+
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    targetCounts[ch] = (targetCounts[ch] || 0) + 1;
+  }
+
+  // Pass 1: Exact matches (GREEN)
+  for (let i = 0; i < len; i++) {
+    if (g[i] === s[i]) {
+      states[i] = "GREEN";
+      targetCounts[g[i]] = (targetCounts[g[i]] || 1) - 1;
+    }
+  }
+
+  // Pass 2: Positional matches (YELLOW) or Absent (GRAY)
+  for (let i = 0; i < len; i++) {
+    if (states[i] === "GREEN") continue;
+    const ch = g[i];
+    if (ch && (targetCounts[ch] || 0) > 0) {
+      states[i] = "YELLOW";
+      targetCounts[ch]--;
+    } else {
+      states[i] = "GRAY";
+    }
+  }
+
+  return states;
+}
+
 export const WordPuzzleGame = ({
   isOpen = false,
   onClose,
@@ -314,19 +351,21 @@ export const WordPuzzleGame = ({
     setTimeout(() => setPointsNotification(null), 3500);
   }, [difficulty, wordLength, basePuzzleList]);
 
-  // Keyboard letter states calculation
+  // Keyboard letter states calculation with two-pass duplicate letter resolution
   const keyStates = useMemo(() => {
     const states = {};
     for (const guess of guesses) {
+      const rowStates = evaluateWordleGuessStates(guess, targetWord);
       for (let i = 0; i < guess.length; i++) {
         const letter = guess[i];
-        if (targetWord[i] === letter) {
+        const letterState = rowStates[i];
+        if (letterState === "GREEN") {
           states[letter] = "GREEN";
-        } else if (targetWord.includes(letter)) {
+        } else if (letterState === "YELLOW") {
           if (states[letter] !== "GREEN") {
             states[letter] = "YELLOW";
           }
-        } else {
+        } else if (letterState === "GRAY") {
           if (!states[letter]) {
             states[letter] = "GRAY";
           }
@@ -808,6 +847,10 @@ export const WordPuzzleGame = ({
                 ? currentInput
                 : "";
 
+              const rowStates = isPastGuess
+                ? evaluateWordleGuessStates(rowGuess, targetWord)
+                : [];
+
               return (
                 <div
                   key={rowIndex}
@@ -820,13 +863,7 @@ export const WordPuzzleGame = ({
                     let state = "EMPTY";
 
                     if (isPastGuess) {
-                      if (letter === targetWord[colIndex]) {
-                        state = "GREEN";
-                      } else if (targetWord.includes(letter)) {
-                        state = "YELLOW";
-                      } else {
-                        state = "GRAY";
-                      }
+                      state = rowStates[colIndex] || "GRAY";
                     } else if (isCurrentRow && letter) {
                       state = "TENTATIVE";
                     }

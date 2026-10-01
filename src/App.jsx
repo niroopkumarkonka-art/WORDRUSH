@@ -299,7 +299,7 @@ export default function App() {
   // --------------------------------------------------------------------------
   // Multiplayer Actions
   // --------------------------------------------------------------------------
-  const handleCreateRoom = async (overrideWordLength, overrideTotalRounds) => {
+  const handleCreateRoom = async (overrideWordLength, overrideTotalRounds, customRoomCode = null) => {
     const wLen = Number(overrideWordLength) || createRoomWordLength || 5;
     const tRounds = Number(overrideTotalRounds) || createRoomTotalRounds || 3;
     
@@ -310,6 +310,7 @@ export default function App() {
       avatar,
       wordLength: wLen,
       totalRounds: tRounds,
+      roomCode: customRoomCode,
     });
     setCurrentView("MULTIPLAYER");
     setIsMatchmakerOpen(false);
@@ -343,6 +344,7 @@ export default function App() {
             avatar,
             wordLength: wLen,
             totalRounds: tRounds,
+            roomCode: customRoomCode,
           }),
         });
         clearTimeout(timeoutId);
@@ -382,6 +384,8 @@ export default function App() {
       return;
     }
 
+    addToast("info", `Connecting to room ${cleanCode}...`);
+
     socketService.send("JOIN_ROOM", {
       roomCode: cleanCode,
       playerId,
@@ -390,6 +394,15 @@ export default function App() {
     });
     setIsMatchmakerOpen(false);
 
+    // 1. Direct localRoom match:
+    if (socketService.localRoom && socketService.localRoom.roomCode === cleanCode) {
+      setRoom(socketService.localRoom);
+      setCurrentView("MULTIPLAYER");
+      addToast("success", `Joined room ${cleanCode}!`, "Ready to Play");
+      return;
+    }
+
+    // 2. Server REST join:
     if (!socketService.connected && !window.location.hostname.endsWith("github.io")) {
       try {
         const controller = new AbortController();
@@ -413,6 +426,9 @@ export default function App() {
             setCurrentView("MULTIPLAYER");
             addToast("success", `Joined room ${data.roomCode}!`, "Ready to Play");
             return;
+          } else if (data.error) {
+            addToast("error", data.error);
+            return;
           }
         }
       } catch (err) {
@@ -420,34 +436,41 @@ export default function App() {
       }
     }
 
-    // P2P / Local cross-tab lookup:
+    // 3. P2P / Local cross-tab lookup:
     try {
       const stored = localStorage.getItem(`wordrush_active_room_${cleanCode}`);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed && (!parsed.players[1] || parsed.players[1].playerId === playerId)) {
-          parsed.players[1] = {
-            playerId,
-            username,
-            score: 0,
-            readyStatus: false,
-            connectionStatus: true,
-            roundsWon: 0,
-            wordsGuessed: 0,
-            hintsUsed: 0,
-            profile: { username, avatar },
-          };
-          parsed.playerCount = 2;
-          parsed.recentEvents = parsed.recentEvents || [];
-          parsed.recentEvents.push(`${username} joined the battle!`);
-          localStorage.setItem(`wordrush_active_room_${cleanCode}`, JSON.stringify(parsed));
+        if (parsed) {
+          if (!parsed.players[1] || parsed.players[1].playerId === playerId) {
+            parsed.players[1] = {
+              playerId,
+              username,
+              score: 0,
+              readyStatus: false,
+              connectionStatus: true,
+              roundsWon: 0,
+              wordsGuessed: 0,
+              hintsUsed: 0,
+              profile: { username, avatar },
+            };
+            parsed.playerCount = 2;
+            parsed.recentEvents = parsed.recentEvents || [];
+            parsed.recentEvents.push(`${username} joined the battle!`);
+            localStorage.setItem(`wordrush_active_room_${cleanCode}`, JSON.stringify(parsed));
+          }
           setRoom(parsed);
           setCurrentView("MULTIPLAYER");
           addToast("success", `Joined room ${cleanCode}!`, "Ready to Play");
           socketService.send("ROOM_SYNC", parsed);
+          return;
         }
       }
     } catch {}
+
+    // 4. Fallback if room not yet started: create the room with this code as host!
+    addToast("warning", `Room "${cleanCode}" not found. Creating room "${cleanCode}" as host...`);
+    handleCreateRoom(5, 3, cleanCode);
   };
 
   const handleLeaveRoom = () => {
@@ -485,19 +508,6 @@ export default function App() {
     if (clean.length !== room.wordLength) {
       addToast("warning", `Cipher must be exactly ${room.wordLength} characters.`);
       return;
-    }
-
-    const seen = new Set();
-    for (const c of clean) {
-      if (seen.has(c)) {
-        addToast(
-          "error",
-          "Duplicate letters detected! Secret ciphers must contain strictly unique characters.",
-          "Invalid Cipher"
-        );
-        return;
-      }
-      seen.add(c);
     }
 
     socketService.send("SUBMIT_SECRET_WORD", {
@@ -596,15 +606,7 @@ export default function App() {
     }
   }
 
-  const secretWordDuplicates = useMemo(() => {
-    if (!secretWordInput) return false;
-    const seen = new Set();
-    for (const c of secretWordInput.toUpperCase()) {
-      if (seen.has(c)) return true;
-      seen.add(c);
-    }
-    return false;
-  }, [secretWordInput]);
+  const secretWordDuplicates = false;
 
   const wheelLetters = useMemo(() => {
     if (room?.currentRound?.wheelLetters && room.currentRound.wheelLetters.length > 0) {
@@ -928,9 +930,9 @@ export default function App() {
                         <div className="p-2.5 rounded-2xl bg-amber-50/80 border border-amber-200 text-left text-xs space-y-0.5 text-slate-700 flex-1">
                           <div className="text-amber-800 font-extrabold uppercase text-[11px] flex items-center gap-1.5">
                             <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                            <span>WORD RULES ({room.wordLength} LETTERS, NO DUPLICATES):</span>
+                            <span>WORD RULES ({room.wordLength} LETTERS):</span>
                           </div>
-                          <div className="text-[11px] text-slate-600">Must be an official English word with unique letters (e.g. CRANE).</div>
+                          <div className="text-[11px] text-slate-600">Must be a valid {room.wordLength}-letter English word (e.g. APPLE, CRANE).</div>
                         </div>
                         <button
                           type="button"
@@ -983,17 +985,10 @@ export default function App() {
                           );
                         })()}
 
-                        {secretWordDuplicates && (
-                          <div className="text-xs font-bold text-rose-700 bg-rose-50 p-2.5 rounded-xl border border-rose-300 flex items-center justify-center gap-1.5 animate-shake">
-                            <AlertCircle className="w-4 h-4 text-rose-500" />
-                            <span>No repeating letters allowed! All letters must be unique.</span>
-                          </div>
-                        )}
-
                         <button
                           id="submit-secret-word-btn"
                           type="submit"
-                          disabled={secretWordInput.length !== room.wordLength || secretWordDuplicates}
+                          disabled={secretWordInput.length !== room.wordLength}
                           className="w-full py-4 rounded-2xl btn-candy-green text-white font-black text-sm uppercase tracking-wider transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer shadow-md"
                         >
                           <Send className="w-4 h-4 stroke-[2.5]" />
