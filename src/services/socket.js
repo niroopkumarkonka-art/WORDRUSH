@@ -196,6 +196,8 @@ class SocketService {
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify({ type, payload }));
       return;
+    } else if (this.socket && this.socket.readyState === WebSocket.CONNECTING) {
+      this.messageQueue.push(JSON.stringify({ type, payload }));
     }
 
     // 2. If WebRTC P2P DataChannel is active, transmit directly to peer

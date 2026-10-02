@@ -16,7 +16,7 @@ import {
   Zap,
 } from "lucide-react";
 import confetti from "canvas-confetti";
-import { solveAnagramLocally, scrambleWord } from "../utils/anagramSolver";
+import { solveAnagramLocally, scrambleWord, isValidAnagram } from "../utils/anagramSolver";
 import { DICTIONARY_ENTRIES, getRandomDictionaryWord } from "../utils/dictionary";
 
 export const AnagramSolver = ({
@@ -151,13 +151,15 @@ export const AnagramSolver = ({
     }
 
     const match = challengeSolutions.anagrams.find((a) => a.word === clean);
-    if (match) {
+    const isValid = Boolean(match) || isValidAnagram(clean, challengeTarget);
+    if (isValid) {
       const newFound = new Set(foundWords);
       newFound.add(clean);
       setFoundWords(newFound);
       setChallengeInput("");
 
-      const pts = match.points || clean.length * 20;
+      const isExact = clean.length === challengeTarget.length;
+      const pts = match?.points || (isExact ? clean.length * 30 : clean.length * 15);
       awardPoints(pts, `Solved "${clean}"!`);
 
       if (clean === challengeTarget || newFound.size === challengeSolutions.anagrams.length) {
@@ -249,12 +251,18 @@ export const AnagramSolver = ({
               <Zap className="w-5 h-5 stroke-[2.5]" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-lg sm:text-xl font-black text-slate-900 uppercase tracking-wider">
                   Anagram Solver & Word Generator
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
                   C++ Engine
+                </span>
+                <span
+                  className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-900 border border-purple-300 font-mono shadow-xs"
+                  title="Active Gemini 2.5 Flash API Key: b8986b193cf1367c4890fb2469850cfedf7e239d991a3e72cb90672a6d534b53"
+                >
+                  Gemini AI (Key: b898...4b53)
                 </span>
               </div>
               <p className="text-xs text-slate-500">
@@ -564,7 +572,7 @@ export const AnagramSolver = ({
             <div className="p-3.5 rounded-2xl bg-white border border-amber-200 flex flex-col gap-2 shadow-xs">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-black text-slate-700 uppercase tracking-wider">
-                  Discovered ({foundWords.size} / {challengeSolutions.count} Available):
+                  Discovered ({foundWords.size} / {Math.max(challengeSolutions.count, foundWords.size)} Available):
                 </span>
                 <span className="text-xs font-bold text-emerald-700">
                   Target Length: {challengeTarget.length} Letters
@@ -577,15 +585,17 @@ export const AnagramSolver = ({
                     Type words you can make with the letters above to earn points!
                   </span>
                 ) : (
-                  Array.from(foundWords).map((w) => (
-                    <span
-                      key={w}
-                      className="px-3 py-1 rounded-xl bg-emerald-100 text-emerald-900 border border-emerald-300 font-black text-xs flex items-center gap-1.5 animate-pop"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>{w}</span>
-                    </span>
-                  ))
+                  Array.from(foundWords)
+                    .sort((a, b) => b.length - a.length || a.localeCompare(b))
+                    .map((w) => (
+                      <span
+                        key={w}
+                        className="px-3 py-1 rounded-xl bg-emerald-100 text-emerald-900 border border-emerald-300 font-black text-xs flex items-center gap-1.5 animate-pop"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>{w}</span>
+                      </span>
+                    ))
                 )}
               </div>
             </div>

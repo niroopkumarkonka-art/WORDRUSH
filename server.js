@@ -1003,7 +1003,7 @@ Rules:
 - Keep it friendly, engaging, and clear.`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+        model: "gemini-2.5-flash",
         contents: prompt,
       });
 
@@ -1189,6 +1189,7 @@ app.get("/api/health", (req, res) => {
     activeRooms: arenaEngine.activeRooms.size,
     dictionarySize: serverDictionary.size,
     aiAvailable: Boolean(process.env.GEMINI_API_KEY),
+    aiKeyPreview: process.env.GEMINI_API_KEY ? `${process.env.GEMINI_API_KEY.slice(0, 6)}...${process.env.GEMINI_API_KEY.slice(-4)}` : null,
   });
 });
 

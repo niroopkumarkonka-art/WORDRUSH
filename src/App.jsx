@@ -62,18 +62,25 @@ export default function App() {
   // User Identity & Profile State (Local Persistence)
   // --------------------------------------------------------------------------
   const [playerId] = useState(() => {
-    const saved = localStorage.getItem("wordrush_player_id");
-    if (saved) return saved;
+    const session = typeof sessionStorage !== "undefined" ? sessionStorage.getItem("wordrush_tab_player_id") : null;
+    if (session) return session;
     const newId = "peer_" + Math.random().toString(36).substring(2, 9);
-    localStorage.setItem("wordrush_player_id", newId);
+    try {
+      sessionStorage.setItem("wordrush_tab_player_id", newId);
+    } catch {}
     return newId;
   });
 
   const [username, setUsername] = useState(() => {
-    return (
-      localStorage.getItem("wordrush_username") ||
-      "Peer_" + Math.floor(100 + Math.random() * 900)
-    );
+    const session = typeof sessionStorage !== "undefined" ? sessionStorage.getItem("wordrush_tab_username") : null;
+    if (session) return session;
+    const saved = localStorage.getItem("wordrush_username");
+    const generated = saved ? `${saved}_${Math.floor(10 + Math.random() * 90)}` : "Peer_" + Math.floor(100 + Math.random() * 900);
+    const finalName = session || generated;
+    try {
+      sessionStorage.setItem("wordrush_tab_username", finalName);
+    } catch {}
+    return finalName;
   });
 
   const [avatar, setAvatar] = useState(() => {
@@ -277,12 +284,12 @@ export default function App() {
     };
   }, [addToast]);
 
-  // If a room URL query is present, open join layer immediately
+  // If a room URL query is present, attempt automatic join immediately
   useEffect(() => {
-    if (joinCodeInput && !room) {
-      setIsMatchmakerOpen(true);
+    if (joinCodeInput && joinCodeInput.length === 5 && !room) {
+      handleJoinRoom(joinCodeInput);
     }
-  }, [joinCodeInput, room]);
+  }, [joinCodeInput, isConnected]);
 
   // Reset local state between phases
   useEffect(() => {
@@ -378,7 +385,8 @@ export default function App() {
   };
 
   const handleJoinRoom = async (codeToJoin) => {
-    const cleanCode = (codeToJoin || joinCodeInput).trim().toUpperCase();
+    const targetCode = typeof codeToJoin === "string" ? codeToJoin : joinCodeInput;
+    const cleanCode = (targetCode || "").trim().toUpperCase();
     if (cleanCode.length !== 5) {
       addToast("warning", "Room code must be exactly 5 letters.");
       return;
@@ -1295,12 +1303,17 @@ export default function App() {
                     maxLength={5}
                     value={joinCodeInput}
                     onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && joinCodeInput.trim().length === 5) {
+                        handleJoinRoom(joinCodeInput);
+                      }
+                    }}
                     placeholder="CODE"
                     className="flex-1 px-4 py-3 rounded-2xl bg-white border-2 border-sky-300 text-slate-800 text-center font-black text-xl uppercase tracking-widest focus:outline-none focus:border-sky-500 shadow-inner"
                   />
                   <button
                     id="modal-join-btn"
-                    onClick={handleJoinRoom}
+                    onClick={() => handleJoinRoom(joinCodeInput)}
                     disabled={joinCodeInput.trim().length !== 5}
                     className="px-6 py-3 rounded-2xl btn-candy-blue text-white font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed hover:scale-102 active:scale-98"
                   >

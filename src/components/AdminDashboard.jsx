@@ -169,10 +169,10 @@ export const AdminDashboard = ({ isOpen = false, onClose }) => {
               <span>Gemini AI Engine</span>
             </span>
             <span className="text-xl font-black text-purple-300 mt-1">
-              {metrics?.aiConfigured ? "Ready" : "Fallback"}
+              {metrics?.aiConfigured ? "Ready (AI Active)" : "Fallback"}
             </span>
-            <span className="text-[10px] text-purple-400 mt-0.5">
-              {metrics?.aiConfigured ? "gemini-3.8-flash" : "Local Clues"}
+            <span className="text-[10px] text-purple-300 font-mono mt-0.5">
+              {metrics?.aiConfigured ? "Key: b898...4b53 (gemini-2.5-flash)" : "Local Clues"}
             </span>
           </div>
         </div>
