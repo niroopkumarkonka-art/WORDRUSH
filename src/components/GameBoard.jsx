@@ -21,6 +21,12 @@ export const GameBoard = ({
     const isPastAttempt = r < attemptsUsed;
     const isCurrentAttempt = r === attemptsUsed && isGuesserTurn;
 
+    const rowGuess = isPastAttempt ? (gameBoard[r] || []).join("") : isCurrentAttempt ? currentInput : "";
+    const charCounts = {};
+    for (const ch of rowGuess) {
+      if (ch) charCounts[ch] = (charCounts[ch] || 0) + 1;
+    }
+
     const rowTiles = [];
     for (let c = 0; c < wordLength; c++) {
       let char = "";
@@ -41,6 +47,9 @@ export const GameBoard = ({
         state = char ? "TENTATIVE" : "EMPTY";
       }
 
+      const isDuplicate = Boolean(char && charCounts[char] > 1);
+      const duplicateCount = isDuplicate ? charCounts[char] : 1;
+
       rowTiles.push(
         <LetterTile
           key={`tile-${r}-${c}`}
@@ -48,6 +57,8 @@ export const GameBoard = ({
           state={state}
           index={c}
           size={wordLength === 6 ? "sm" : wordLength === 5 ? "md" : "lg"}
+          isDuplicate={isDuplicate}
+          duplicateCount={duplicateCount}
         />
       );
     }
@@ -125,6 +136,13 @@ export const GameBoard = ({
               {currentWordClassification.description}
             </span>
           </div>
+          {currentWordClassification.duplicateSummary && (
+            <div className="p-2 rounded-xl bg-purple-50 border border-purple-200 text-purple-900 font-bold text-xs flex items-center gap-1.5 animate-fadeIn">
+              <span className="text-purple-600 font-black">🔁 Duplicate Detected:</span>
+              <span>{currentWordClassification.duplicateSummary}</span>
+            </div>
+          )}
+
           {currentWordClassification.note && (
             <div className="p-2 rounded-xl bg-purple-50 border border-purple-200 text-purple-950 font-bold text-xs flex items-center gap-1.5 animate-fadeIn">
               <Sparkles className="w-3.5 h-3.5 text-purple-600 shrink-0" />

@@ -851,6 +851,11 @@ export const WordPuzzleGame = ({
                 ? evaluateWordleGuessStates(rowGuess, targetWord)
                 : [];
 
+              const charCounts = {};
+              for (const ch of rowGuess) {
+                if (ch) charCounts[ch] = (charCounts[ch] || 0) + 1;
+              }
+
               return (
                 <div
                   key={rowIndex}
@@ -868,6 +873,9 @@ export const WordPuzzleGame = ({
                       state = "TENTATIVE";
                     }
 
+                    const isDuplicate = Boolean(letter && charCounts[letter] > 1);
+                    const duplicateCount = isDuplicate ? charCounts[letter] : 1;
+
                     return (
                       <LetterTile
                         key={colIndex}
@@ -882,6 +890,8 @@ export const WordPuzzleGame = ({
                             : "lg"
                         }
                         isFirstCharMatch={false}
+                        isDuplicate={isDuplicate}
+                        duplicateCount={duplicateCount}
                       />
                     );
                   })}
@@ -983,6 +993,13 @@ export const WordPuzzleGame = ({
                   {currentInput.length} / {wordLength} letters
                 </span>
               </div>
+
+              {classification.duplicateSummary && (
+                <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-900 font-bold text-xs animate-fadeIn">
+                  <span className="text-purple-600 font-black">🔁 Duplicate Detected:</span>
+                  <span>{classification.duplicateSummary}</span>
+                </div>
+              )}
 
               {classification.note && (
                 <p className="text-[11px] text-purple-900 bg-purple-50 p-1.5 rounded-lg border border-purple-200">

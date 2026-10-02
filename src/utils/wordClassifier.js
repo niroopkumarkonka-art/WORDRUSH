@@ -88,12 +88,37 @@ export function classifyWord(word) {
       badgeColor: "bg-slate-100 text-slate-500 border-slate-200",
       description: "Type letters to inspect word type.",
       icon: "⌨️",
+      hasDuplicates: false,
+      duplicateChars: [],
+      duplicateSummary: null,
     };
   }
 
+  // Detect any repeating/duplicate characters
+  const charFreq = {};
+  const duplicateChars = [];
+  for (const c of clean) {
+    charFreq[c] = (charFreq[c] || 0) + 1;
+    if (charFreq[c] === 2) {
+      duplicateChars.push(c);
+    }
+  }
+  const hasDuplicates = duplicateChars.length > 0;
+  const duplicateSummary = hasDuplicates
+    ? `Duplicate letter${duplicateChars.length > 1 ? "s" : ""}: ${duplicateChars.map((c) => `'${c}' (${charFreq[c]}×)`).join(", ")}`
+    : null;
+
+  // Helper to append duplicate metadata
+  const withDupeMeta = (result) => ({
+    ...result,
+    hasDuplicates,
+    duplicateChars,
+    duplicateSummary,
+  });
+
   // 1. Check if it's a known Person/Character Name
   if (COMMON_NAMES.has(clean)) {
-    return {
+    return withDupeMeta({
       type: "NAME",
       label: "Person / Character Name",
       category: "Proper Name",
@@ -103,12 +128,12 @@ export function classifyWord(word) {
       icon: "👤",
       isName: true,
       isWord: true,
-    };
+    });
   }
 
   // 2. Check if it's an Action Verb
   if (ACTION_VERBS.has(clean)) {
-    return {
+    return withDupeMeta({
       type: "VERB",
       label: "Action / Dynamic Verb",
       category: "Verb",
@@ -118,12 +143,12 @@ export function classifyWord(word) {
       icon: "⚡",
       isName: false,
       isWord: true,
-    };
+    });
   }
 
   // 3. Check if it's an Adjective
   if (ADJECTIVES.has(clean)) {
-    return {
+    return withDupeMeta({
       type: "ADJECTIVE",
       label: "Descriptive / Adjective",
       category: "Adjective",
@@ -133,12 +158,12 @@ export function classifyWord(word) {
       icon: "✨",
       isName: false,
       isWord: true,
-    };
+    });
   }
 
   // 4. Check if it's a Common Object / Noun
   if (COMMON_NOUNS.has(clean)) {
-    return {
+    return withDupeMeta({
       type: "NOUN",
       label: "Object / Common Noun",
       category: "Noun",
@@ -148,11 +173,11 @@ export function classifyWord(word) {
       icon: "📦",
       isName: false,
       isWord: true,
-    };
+    });
   }
 
   // 5. Default fallback to Standard English Word
-  return {
+  return withDupeMeta({
     type: "WORD",
     label: "English Dictionary Word",
     category: "Standard Word",
@@ -162,7 +187,7 @@ export function classifyWord(word) {
     icon: "📖",
     isName: false,
     isWord: true,
-  };
+  });
 }
 
 /**
