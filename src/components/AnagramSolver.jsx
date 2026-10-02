@@ -115,6 +115,58 @@ export const AnagramSolver = ({
       });
   }, [inputLetters]);
 
+  // Duplicate character analysis for input letters
+  const inputDuplicates = useMemo(() => {
+    if (!inputLetters) return { hasDuplicates: false, counts: {}, list: [], summary: "" };
+    const counts = {};
+    for (const ch of inputLetters) {
+      counts[ch] = (counts[ch] || 0) + 1;
+    }
+    const list = Object.entries(counts)
+      .filter(([_, count]) => count > 1)
+      .map(([char, count]) => ({ char, count }));
+    return {
+      hasDuplicates: list.length > 0,
+      counts,
+      list,
+      summary: list.map((item) => `'${item.char}' (${item.count}×)`).join(", "),
+    };
+  }, [inputLetters]);
+
+  // Duplicate character analysis for challenge puzzle mystery scramble
+  const challengeDuplicates = useMemo(() => {
+    if (!challengeScramble) return { hasDuplicates: false, counts: {}, list: [], summary: "" };
+    const counts = {};
+    for (const ch of challengeScramble) {
+      counts[ch] = (counts[ch] || 0) + 1;
+    }
+    const list = Object.entries(counts)
+      .filter(([_, count]) => count > 1)
+      .map(([char, count]) => ({ char, count }));
+    return {
+      hasDuplicates: list.length > 0,
+      counts,
+      list,
+      summary: list.map((item) => `'${item.char}' (${item.count}×)`).join(", "),
+    };
+  }, [challengeScramble]);
+
+  // Real-time duplicate character analysis for active typing input in challenge
+  const challengeInputDuplicates = useMemo(() => {
+    if (!challengeInput) return { hasDuplicates: false, summary: "" };
+    const counts = {};
+    for (const ch of challengeInput) {
+      counts[ch] = (counts[ch] || 0) + 1;
+    }
+    const list = Object.entries(counts)
+      .filter(([_, count]) => count > 1)
+      .map(([char, count]) => `'${char}' (${count}×)`);
+    return {
+      hasDuplicates: list.length > 0,
+      summary: list.join(", "),
+    };
+  }, [challengeInput]);
+
   // Challenge Anagrams list for current challenge word
   const challengeSolutions = useMemo(() => {
     return solveAnagramLocally(challengeTarget);
@@ -369,18 +421,50 @@ export const AnagramSolver = ({
                 </button>
               </div>
 
-              {/* Scrambled Visual Chips */}
+              {/* Scrambled Visual Chips & Duplicate Letter Indicators */}
               {inputLetters.length > 0 && (
-                <div className="flex items-center gap-1.5 pt-1 overflow-x-auto">
-                  <span className="text-[11px] font-bold text-slate-500 mr-1">Tiles:</span>
-                  {inputLetters.split("").map((ch, i) => (
-                    <span
-                      key={i}
-                      className="w-7 h-7 rounded-lg bg-amber-300 border-b-2 border-amber-500 text-amber-950 font-black text-xs flex items-center justify-center shadow-xs"
-                    >
-                      {ch}
-                    </span>
-                  ))}
+                <div className="flex flex-col gap-2 pt-1">
+                  <div className="flex items-center gap-2 overflow-x-auto py-1">
+                    <span className="text-[11px] font-bold text-slate-500 mr-1 shrink-0">Tiles:</span>
+                    {inputLetters.split("").map((ch, i) => {
+                      const isDup = Boolean(inputDuplicates.counts[ch] > 1);
+                      const dupCount = inputDuplicates.counts[ch] || 1;
+                      return (
+                        <div key={i} className="relative inline-block shrink-0">
+                          <span
+                            className={`w-8 h-8 rounded-lg ${
+                              isDup
+                                ? "bg-purple-200 border-b-2 border-purple-500 text-purple-950 ring-1 ring-purple-400 font-black"
+                                : "bg-amber-300 border-b-2 border-amber-500 text-amber-950 font-black"
+                            } text-xs flex items-center justify-center shadow-xs select-none`}
+                          >
+                            {ch}
+                          </span>
+                          {isDup && (
+                            <span
+                              title={`Duplicate character '${ch}' appears ${dupCount} times`}
+                              className="absolute -top-1.5 -right-1.5 px-1 py-0.2 rounded-full bg-purple-600 text-[8px] font-black text-white shadow-xs border border-white z-10"
+                            >
+                              {dupCount}×
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Duplicate Detection Alert Badge */}
+                  {inputDuplicates.hasDuplicates && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-900 text-xs font-semibold animate-fadeIn shadow-xs">
+                      <span className="text-purple-700 font-black flex items-center gap-1">
+                        <span>🔁</span> Duplicate Detected:
+                      </span>
+                      <span>{inputDuplicates.summary}</span>
+                      <span className="text-purple-600/80 text-[10px] ml-auto hidden sm:inline">
+                        (Permutations sorted & frequency matched)
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -438,6 +522,23 @@ export const AnagramSolver = ({
                             Exact Anagram
                           </span>
                         )}
+                        {/* Word Duplicate Character Tag */}
+                        {(() => {
+                          const wCounts = {};
+                          let hasDup = false;
+                          for (const c of item.word) {
+                            wCounts[c] = (wCounts[c] || 0) + 1;
+                            if (wCounts[c] > 1) hasDup = true;
+                          }
+                          return hasDup ? (
+                            <span
+                              className="px-1.5 py-0.2 rounded-md bg-purple-100 text-purple-800 border border-purple-200 font-bold text-[9px] flex items-center gap-0.5"
+                              title="Word contains repeating duplicate letters"
+                            >
+                              <span>🔁</span> Rep. Letters
+                            </span>
+                          ) : null;
+                        })()}
                         <span className="px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-600 font-bold text-[9px]">
                           {item.length} Letters
                         </span>
@@ -490,16 +591,43 @@ export const AnagramSolver = ({
                 </button>
               </div>
 
-              {/* Scrambled Letter Tiles */}
-              <div className="flex items-center justify-center gap-2 sm:gap-3 py-1">
-                {challengeScramble.split("").map((ch, idx) => (
-                  <div
-                    key={idx}
-                    className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-b from-amber-300 to-amber-400 border-b-4 border-amber-600 shadow-md text-amber-950 font-black text-xl sm:text-2xl flex items-center justify-center select-none transform hover:scale-105 transition-transform"
-                  >
-                    {ch}
+              {/* Scrambled Letter Tiles with Duplicate Detection */}
+              <div className="flex flex-col items-center gap-2 py-1">
+                <div className="flex items-center justify-center gap-2 sm:gap-3">
+                  {challengeScramble.split("").map((ch, idx) => {
+                    const isDup = Boolean(challengeDuplicates.counts[ch] > 1);
+                    const dupCount = challengeDuplicates.counts[ch] || 1;
+                    return (
+                      <div key={idx} className="relative inline-block">
+                        <div
+                          className={`w-11 h-11 sm:w-13 sm:h-13 rounded-2xl ${
+                            isDup
+                              ? "bg-gradient-to-b from-purple-200 to-purple-300 border-b-4 border-purple-600 text-purple-950 ring-2 ring-purple-400"
+                              : "bg-gradient-to-b from-amber-300 to-amber-400 border-b-4 border-amber-600 text-amber-950"
+                          } shadow-md font-black text-xl sm:text-2xl flex items-center justify-center select-none transform hover:scale-105 transition-transform`}
+                        >
+                          {ch}
+                        </div>
+                        {isDup && (
+                          <span
+                            title={`Mystery duplicate character '${ch}' (${dupCount}×)`}
+                            className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full bg-purple-600 text-[10px] font-black text-white shadow-md border-2 border-white z-10 animate-bounce"
+                          >
+                            {dupCount}×
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Challenge Duplicate Letters Alert */}
+                {challengeDuplicates.hasDuplicates && (
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100/90 border border-purple-300 text-purple-900 text-xs font-bold animate-fadeIn shadow-xs">
+                    <span className="text-purple-700 font-black">🔁 Duplicate Letter:</span>
+                    <span>{challengeDuplicates.summary}</span>
                   </div>
-                ))}
+                )}
               </div>
 
               {/* Action Buttons: Shuffle, Auto-Solve, New Anagram */}
@@ -529,30 +657,39 @@ export const AnagramSolver = ({
               </div>
             </div>
 
-            {/* Input Form */}
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={challengeInput}
-                onChange={(e) => setChallengeInput(e.target.value.toUpperCase())}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleChallengeSubmit();
-                  }
-                }}
-                placeholder="TYPE ANAGRAM WORD & PRESS ENTER..."
-                className={`flex-1 text-sm font-black px-4 py-3 rounded-xl bg-white border-2 text-slate-900 tracking-wider placeholder:text-slate-400 focus:outline-none ${
-                  challengeShake ? "border-rose-500 animate-shake" : "border-amber-300 focus:border-amber-500"
-                }`}
-              />
+            {/* Input Form with Real-time Duplicate Warning */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={challengeInput}
+                  onChange={(e) => setChallengeInput(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleChallengeSubmit();
+                    }
+                  }}
+                  placeholder="TYPE ANAGRAM WORD & PRESS ENTER..."
+                  className={`flex-1 text-sm font-black px-4 py-3 rounded-xl bg-white border-2 text-slate-900 tracking-wider placeholder:text-slate-400 focus:outline-none ${
+                    challengeShake ? "border-rose-500 animate-shake" : "border-amber-300 focus:border-amber-500"
+                  }`}
+                />
 
-              <button
-                onClick={handleChallengeSubmit}
-                className="px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-black text-xs uppercase tracking-wider shadow-md hover:scale-102 active:scale-95 cursor-pointer transition-all"
-              >
-                SUBMIT
-              </button>
+                <button
+                  onClick={handleChallengeSubmit}
+                  className="px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-black text-xs uppercase tracking-wider shadow-md hover:scale-102 active:scale-95 cursor-pointer transition-all"
+                >
+                  SUBMIT
+                </button>
+              </div>
+
+              {challengeInputDuplicates.hasDuplicates && (
+                <div className="flex items-center gap-1 text-[11px] font-bold text-purple-700 px-2 animate-fadeIn">
+                  <span>🔁 Duplicate letter entered:</span>
+                  <span className="font-extrabold">{challengeInputDuplicates.summary}</span>
+                </div>
+              )}
             </div>
 
             {/* Status Message */}
