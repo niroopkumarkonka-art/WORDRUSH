@@ -1397,9 +1397,27 @@ app.post("/api/admin/rooms/:roomCode/terminate", (req, res) => {
 
 const wss = new WebSocketServer({ server });
 
+function broadcastOnlineCount() {
+  const activeCount = Math.max(wss.clients ? wss.clients.size : 1, 1);
+  const msg = JSON.stringify({
+    type: "ONLINE_COUNT_UPDATE",
+    payload: { onlineCount: activeCount },
+  });
+  if (wss.clients) {
+    for (const client of wss.clients) {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(msg);
+      }
+    }
+  }
+}
+
 wss.on("connection", (ws) => {
   let boundPlayerId = null;
   let boundRoomCode = null;
+
+  // Broadcast real-time active users count on connection
+  broadcastOnlineCount();
 
   ws.on("message", async (rawMessage) => {
     try {
@@ -1757,6 +1775,7 @@ wss.on("connection", (ws) => {
       socketPlayerIds.delete(ws);
     }
     socketRoomCodes.delete(ws);
+    broadcastOnlineCount();
   });
 });
 

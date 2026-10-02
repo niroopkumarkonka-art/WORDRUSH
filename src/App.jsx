@@ -125,6 +125,7 @@ export default function App() {
   const [floatingEmotes, setFloatingEmotes] = useState([]);
   const [toasts, setToasts] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [onlineCount, setOnlineCount] = useState(1);
 
   // Toast Helper (Pop-up time limit: 1.5 sec only)
   const addToast = useCallback((type, message, title) => {
@@ -273,13 +274,34 @@ export default function App() {
       addToast("info", data.message, "Oasis Broadcast");
     });
 
+    socketService.on("ONLINE_COUNT_UPDATE", (data) => {
+      if (data && typeof data.onlineCount === "number") {
+        setOnlineCount(Math.max(data.onlineCount, 1));
+      }
+    });
+
     socketService.on("ERROR", (err) => {
       setIsBoardShake(true);
       setTimeout(() => setIsBoardShake(false), 500);
       addToast("error", err.message);
     });
 
+    // Also poll active connections periodically
+    const fetchStatus = () => {
+      fetch("/api/status")
+        .then((r) => r.json())
+        .then((d) => {
+          if (d && typeof d.activeConnections === "number") {
+            setOnlineCount(Math.max(d.activeConnections, 1));
+          }
+        })
+        .catch(() => {});
+    };
+    fetchStatus();
+    const pollTimer = setInterval(fetchStatus, 8000);
+
     return () => {
+      clearInterval(pollTimer);
       socketService.disconnect();
     };
   }, [addToast]);
@@ -742,7 +764,7 @@ export default function App() {
               onOpenRules={() => setIsRulesOpen(true)}
               onOpenUserStats={() => setIsUserDashboardOpen(true)}
               onOpenAdmin={() => setIsAdminOpen(true)}
-              onlineCount={28}
+              onlineCount={onlineCount}
               serverStatus={isConnected ? "Online" : "Connecting..."}
             />
           </main>

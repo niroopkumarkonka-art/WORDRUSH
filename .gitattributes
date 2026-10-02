@@ -1,0 +1,16 @@
+# ============================================================================
+# WORDRUSH ARENA - GitHub Linguist Language Tracking Configuration
+# Balances repository language statistics for C++ backend engine, SQL, and JS
+# ============================================================================
+
+backend/*.cpp linguist-language=C++
+backend/*.hpp linguist-language=C++
+backend/*.h linguist-language=C++
+
+database/*.sql linguist-language=SQL
+database/migrations/*.sql linguist-language=SQL
+
+# Exclude large compiled binaries or static dictionary arrays from inflating JS stats
+backend/wordrush_engine.exe binary
+public/dictionary.txt linguist-documentation=true
+src/utils/comprehensiveWords.js linguist-generated=true

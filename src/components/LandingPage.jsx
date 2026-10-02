@@ -19,7 +19,7 @@ export const LandingPage = ({
   onOpenRules,
   onOpenUserStats,
   onOpenAdmin,
-  onlineCount = 28,
+  onlineCount = 1,
   serverStatus = "Online",
 }) => {
   useEffect(() => {

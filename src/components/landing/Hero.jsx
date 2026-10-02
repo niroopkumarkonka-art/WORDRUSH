@@ -52,7 +52,7 @@ export default function Hero({
   onOpenAnagrams,
   onOpenRules,
   onOpenUserStats,
-  onlineCount = 28,
+  onlineCount = 1,
   serverStatus = "Online",
 }) {
   const ref = useRef(null);
